@@ -53,6 +53,9 @@ export function parseCaseLinks(
 export function cleanTitle(raw: string): string {
   return raw
     .replace(/\s*\[\d{4}\]\s+\w+\s+\d+.*$/, "")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
     .replace(/[<>:"/\\|?*]/g, "_")
     .trim();
 }
