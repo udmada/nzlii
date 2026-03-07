@@ -1,8 +1,8 @@
 [tools]
-"github:projectdiscovery/katana" = "latest"
-node = "24"
-pnpm = "latest"
+hk = "latest"
+node = "lts"
 pkl = "latest"
+pnpm = "latest"
 
 [tasks.scrape]
 description = "Run the NZLII scraper"
