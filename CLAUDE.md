@@ -1,0 +1,2 @@
+- Use `zsh` to write shell-compatiable scripts, wherever you try to use `bash`
+- most CLIs, if needed to be on `PATH`, are likely managed by `mise`, therefore, either include the mise shisms in `PATH`, or use `mise exec -- <CLI installed by mise>`
