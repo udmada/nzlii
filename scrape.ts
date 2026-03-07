@@ -1,16 +1,13 @@
 // scrape.ts
 // Run: mise run scrape [COURT] [YEAR]
 // Example: node --experimental-strip-types scrape.ts NZSC 2026
+// List courts: node --experimental-strip-types scrape.ts
 
 import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 
-const COURT = process.argv[2] ?? "NZSC";
-const YEAR = process.argv[3] ?? "2026";
-const BASE = `https://www.nzlii.org/nz/cases/${COURT}/${YEAR}`;
-const INDEX_URL = `${BASE}/`;
-const OUTPUT_DIR = path.join("output", COURT, YEAR);
+const DATABASES_URL = "https://www.nzlii.org/databases.html";
 
 const HEADERS = {
   "User-Agent":
@@ -26,6 +23,20 @@ function sleep(ms: number): Promise<void> {
 function randomDelay(): Promise<void> {
   // 1000–4000ms randomised delay
   return sleep(1000 + Math.random() * 3000);
+}
+
+/** Extract NZ court codes and names from the databases page HTML. */
+export function parseCourts(html: string): Array<{ code: string; name: string }> {
+  const pattern = /href="\/nz\/cases\/([^/]+)\/"[^>]*>([^<]+)<\/a>/gi;
+  const results: Array<{ code: string; name: string }> = [];
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(html)) !== null) {
+    const code = match[1];
+    const name = match[2]?.trim();
+    if (!code || !name) continue;
+    results.push({ code, name });
+  }
+  return results;
 }
 
 /** Extract (caseNum, title, url) tuples from the index page HTML. */
@@ -119,12 +130,27 @@ async function fetchBinary(url: string): Promise<Buffer> {
   return Buffer.from(await res.arrayBuffer());
 }
 
-async function main(): Promise<void> {
-  await fs.mkdir(OUTPUT_DIR, { recursive: true });
+async function listCourts(): Promise<void> {
+  console.log(`Fetching court list: ${DATABASES_URL}`);
+  const html = await fetchText(DATABASES_URL);
+  const courts = parseCourts(html);
+  console.log(`\nAvailable NZ courts (${courts.length}):\n`);
+  for (const { code, name } of courts) {
+    console.log(`  ${code.padEnd(20)} ${name}`);
+  }
+  console.log(`\nUsage: mise run scrape <COURT> <YEAR>`);
+  console.log(`Example: mise run scrape NZSC 2026`);
+}
 
-  console.log(`Fetching index: ${INDEX_URL}`);
-  const indexHtml = await fetchText(INDEX_URL);
-  const cases = parseCaseLinks(indexHtml, BASE);
+async function scrape(court: string, year: string): Promise<void> {
+  const base = `https://www.nzlii.org/nz/cases/${court}/${year}`;
+  const outputDir = path.join("output", court, year);
+
+  await fs.mkdir(outputDir, { recursive: true });
+
+  console.log(`Fetching index: ${base}/`);
+  const indexHtml = await fetchText(`${base}/`);
+  const cases = parseCaseLinks(indexHtml, base);
 
   console.log(`Found ${cases.length} case(s)`);
   if (cases.length === 0) return;
@@ -138,14 +164,14 @@ async function main(): Promise<void> {
       const pdfHref = detectPdf(pageHtml);
 
       if (pdfHref) {
-        const pdfUrl = resolveUrl(pdfHref, BASE);
-        const dest = path.join(OUTPUT_DIR, `${num} - ${title}.pdf`);
+        const pdfUrl = resolveUrl(pdfHref, base);
+        const dest = path.join(outputDir, `${num} - ${title}.pdf`);
         const data = await fetchBinary(pdfUrl);
         await fs.writeFile(dest, data);
         console.log(`  -> PDF: ${dest}`);
       } else {
         const text = extractText(pageHtml);
-        const dest = path.join(OUTPUT_DIR, `${num} - ${title}.txt`);
+        const dest = path.join(outputDir, `${num} - ${title}.txt`);
         await fs.writeFile(dest, text, "utf-8");
         console.log(`  -> TXT: ${dest}`);
       }
@@ -154,12 +180,17 @@ async function main(): Promise<void> {
     }
   }
 
-  console.log(`\nDone. Output: ${OUTPUT_DIR}`);
+  console.log(`\nDone. Output: ${outputDir}`);
 }
 
 // Only run when executed directly, not when imported by tests
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  main().catch((err) => {
+  const court = process.argv[2];
+  const year = process.argv[3];
+
+  const run = court && year ? scrape(court, year) : listCourts();
+
+  run.catch((err) => {
     console.error("Fatal:", err);
     process.exit(1);
   });
