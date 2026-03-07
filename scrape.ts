@@ -28,7 +28,10 @@ function randomDelay(): Promise<void> {
 }
 
 /** Extract (caseNum, rawTitle, relativeUrl) from the index page HTML */
-function parseCaseLinks(html: string): Array<{ num: string; title: string; url: string }> {
+export function parseCaseLinks(
+  html: string,
+  base: string,
+): Array<{ num: string; title: string; url: string }> {
   // Match: <a href="../2026/N.html">Title text</a>
   const pattern = /<a\s[^>]*href="[^"]*\/(\d+)\.html"[^>]*>([^<]+)<\/a>/gi;
   const results: Array<{ num: string; title: string; url: string }> = [];
@@ -40,7 +43,7 @@ function parseCaseLinks(html: string): Array<{ num: string; title: string; url: 
     results.push({
       num,
       title: cleanTitle(rawTitle),
-      url: `${BASE}/${num}.html`,
+      url: `${base}/${num}.html`,
     });
   }
   return results;
@@ -51,7 +54,7 @@ function parseCaseLinks(html: string): Array<{ num: string; title: string; url: 
  * "Body Corporate 207624 v Grimshaw & Co [2026] NZSC 5 (17 February 2026)"
  * → "Body Corporate 207624 v Grimshaw & Co"
  */
-function cleanTitle(raw: string): string {
+export function cleanTitle(raw: string): string {
   return raw
     .replace(/\s*\[\d{4}\]\s+\w+\s+\d+.*$/, "")
     .replace(/[<>:"/\\|?*]/g, "_")
@@ -59,7 +62,7 @@ function cleanTitle(raw: string): string {
 }
 
 /** Detect embedded PDF in page HTML. Returns href or null. */
-function detectPdf(html: string): string | null {
+export function detectPdf(html: string): string | null {
   const patterns = [
     /<object[^>]+data="([^"]+\.pdf)"[^>]*>/i,
     /<embed[^>]+src="([^"]+\.pdf)"[^>]*>/i,
@@ -73,10 +76,10 @@ function detectPdf(html: string): string | null {
 }
 
 /** Resolve a possibly root-relative URL against the site origin. */
-function resolveUrl(href: string): string {
+export function resolveUrl(href: string, base: string): string {
   if (href.startsWith("http")) return href;
   if (href.startsWith("/")) return `https://www.nzlii.org${href}`;
-  return `${BASE}/${href}`;
+  return `${base}/${href}`;
 }
 
 async function fetchText(url: string): Promise<string> {
@@ -96,7 +99,7 @@ async function main(): Promise<void> {
 
   console.log(`Fetching index: ${INDEX_URL}`);
   const indexHtml = await fetchText(INDEX_URL);
-  const cases = parseCaseLinks(indexHtml);
+  const cases = parseCaseLinks(indexHtml, BASE);
 
   console.log(`Found ${cases.length} case(s)`);
   if (cases.length === 0) return;
@@ -110,13 +113,13 @@ async function main(): Promise<void> {
       const pdfHref = detectPdf(pageHtml);
 
       if (pdfHref) {
-        const pdfUrl = resolveUrl(pdfHref);
+        const pdfUrl = resolveUrl(pdfHref, BASE);
         const dest = path.join(OUTPUT_DIR, `${num} - ${title}.pdf`);
         const data = await fetchBinary(pdfUrl);
         await fs.writeFile(dest, data);
         console.log(`  -> PDF: ${dest}`);
       } else {
-        const txtUrl = resolveUrl(`${num}.txt`);
+        const txtUrl = resolveUrl(`${num}.txt`, BASE);
         const text = await fetchText(txtUrl);
         const dest = path.join(OUTPUT_DIR, `${num} - ${title}.txt`);
         await fs.writeFile(dest, text, "utf-8");

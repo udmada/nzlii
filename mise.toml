@@ -22,3 +22,7 @@ run = "pnpm oxfmt ."
 [tasks."fmt:check"]
 description = "Check formatting (CI)"
 run = "pnpm oxfmt --check ."
+
+[tasks.test]
+description = "Run unit tests"
+run = "node --experimental-strip-types --test scrape.test.ts"
