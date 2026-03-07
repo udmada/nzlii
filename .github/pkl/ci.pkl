@@ -1,0 +1,52 @@
+amends "@com.github.actions/Workflow.pkl"
+import "@com.github.actions/Step.pkl"
+
+import "common.pkl"
+
+name = "CI"
+
+on = "push"
+
+jobs {
+  ["build"] {
+    `runs-on` = "ubuntu-slim"
+    steps = (common.steps) {
+      (Step) {
+        name = "Verify pkl gen is up to date"
+        run = "mise run pkl:gen && git diff --exit-code .github/"
+      }
+      (Step) {
+        name = "Format check"
+        run = "mise run format:check"
+      }
+      (Step) {
+        name = "Build"
+        run = "mise run build"
+      }
+    }
+  }
+  ["test"] {
+    `runs-on` = "ubuntu-slim"
+    needs = "build"
+    steps = (common.steps) {
+      (Step) {
+        name = "Test"
+        run = "mise run test"
+      }
+    }
+  }
+  ["catch-AOT-specific-issues"] {
+    `runs-on` = "ubuntu-latest"
+    needs = "build"
+    steps = (common.steps) {
+      (Step) {
+        name = "Install AOT prerequisites"
+        run = "sudo apt-get install -y zlib1g-dev"
+      }
+      (Step) {
+        name = "AOT Publish"
+        run = "mise run publish"
+      }
+    }
+  }
+}
