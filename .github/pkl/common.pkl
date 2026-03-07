@@ -15,13 +15,8 @@ steps: Listing<*Step | AbstractTypedStep> = new Listing {
       experimental = true
     }
   }
-  (catalog.`actions/cache@v4`) {
-    name = "dotnet restore cache"
-    id = "dotnet-cache"
-    with {
-      path = "~/.nuget/packages"
-      key = "nuget-${{hashFiles('**/packages.lock.json')}}"
-      `restore-keys` = "nuget-"
-    }
+  (Step) {
+    name = "Install dependencies"
+    run = "pnpm install --frozen-lockfile"
   }
 }

@@ -8,7 +8,7 @@ workflows {
 dependabot {
   updates {
     new {
-      `package-ecosystem` = "nuget"
+      `package-ecosystem` = "npm"
       directory = "/"
       schedule {
         interval = "weekly"

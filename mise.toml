@@ -2,6 +2,7 @@
 "github:projectdiscovery/katana" = "latest"
 node = "24"
 pnpm = "latest"
+pkl = "latest"
 
 [tasks.scrape]
 description = "Run the NZLII scraper"
@@ -26,3 +27,11 @@ run = "pnpm oxfmt --check ."
 [tasks.test]
 description = "Run unit tests"
 run = "node --experimental-strip-types --test scrape.test.ts"
+
+[tasks.install]
+description = "Install dependencies (frozen)"
+run = "pnpm install --frozen-lockfile"
+
+[tasks."pkl:gen"]
+description = "Generate GitHub Actions YAML from pkl sources"
+run = "pkl eval -m .github/ --project-dir .github/pkl .github/pkl/index.pkl"
