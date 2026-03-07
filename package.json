@@ -8,7 +8,8 @@
     "lint": "oxlint --tsconfig=tsconfig.json --type-aware .",
     "fmt": "oxfmt .",
     "fmt:check": "oxfmt --check .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test scrape.test.ts"
   },
   "devDependencies": {
     "@types/node": "^25.3.5",
