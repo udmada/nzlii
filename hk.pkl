@@ -1,0 +1,20 @@
+amends "package://github.com/jdx/hk/releases/download/v1.38.0/hk@1.38.0#/Config.pkl"
+
+hooks {
+    ["pre-commit"] {
+        steps {
+            ["typecheck"] {
+                glob = List("**/*.ts")
+                check = "mise run typecheck"
+            }
+            ["lint"] {
+                glob = List("**/*.ts", "**/*.js")
+                check = "mise run lint"
+            }
+            ["fmt-check"] {
+                glob = List("**/*.ts", "**/*.js")
+                check = "mise run fmt:check"
+            }
+        }
+    }
+}

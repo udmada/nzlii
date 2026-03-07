@@ -1,0 +1,19 @@
+amends "@pkl.github.dependabotManagedActions/DependabotManagedActions.pkl"
+
+workflows {
+  ["workflows/ci.yml"] = import("../pkl/ci.pkl")
+  ["workflows/pr-lint.yml"] = import("../pkl/pr-lint.pkl")
+}
+
+dependabot {
+  updates {
+    new {
+      `package-ecosystem` = "nuget"
+      directory = "/"
+      schedule {
+        interval = "weekly"
+        timezone = "Pacific/Auckland"
+      }
+    }
+  }
+}

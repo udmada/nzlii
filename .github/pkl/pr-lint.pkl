@@ -1,0 +1,38 @@
+amends "@com.github.actions/Workflow.pkl"
+import "@com.github.actions/Step.pkl"
+
+import "common.pkl"
+
+name = "Lint PR"
+
+on {
+  pull_request_target {
+    types {
+      "opened"
+      "reopened"
+      "edited"
+      "synchronize"
+    }
+  }
+}
+
+jobs {
+  ["main"] {
+    name = "Validate PR title"
+    `runs-on` = "ubuntu-slim"
+    permissions {
+      `pull-requests` = "read"
+    }
+    steps = (common.steps) {
+      (Step) {
+        uses = "amannn/action-semantic-pull-request@v6"
+        with {
+          ["wip"] = "true"
+        }
+        env {
+          ["GITHUB_TOKEN"] = module.context.github.token
+        }
+      }
+    }
+  }
+}

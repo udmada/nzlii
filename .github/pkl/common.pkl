@@ -1,0 +1,27 @@
+import "@com.github.actions/AbstractTypedStep.pkl"
+import "@com.github.actions/catalog.pkl"
+import "@com.github.actions/Step.pkl"
+
+import "actions/MiseAction.pkl"
+
+steps: Listing<*Step | AbstractTypedStep> = new Listing {
+  (catalog.`actions/checkout@v6`) {
+    with {
+      `fetch-depth` = 1
+    }
+  }
+  (MiseAction) {
+    with {
+      experimental = true
+    }
+  }
+  (catalog.`actions/cache@v4`) {
+    name = "dotnet restore cache"
+    id = "dotnet-cache"
+    with {
+      path = "~/.nuget/packages"
+      key = "nuget-${{hashFiles('**/packages.lock.json')}}"
+      `restore-keys` = "nuget-"
+    }
+  }
+}
