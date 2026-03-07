@@ -8,6 +8,10 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 const DATABASES_URL = "https://www.nzlii.org/databases.html";
+const COURTS_CACHE_PATH = ".cache/courts.json";
+const COURTS_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+type CourtsCache = { fetchedAt: number; courts: Array<{ code: string; name: string }> };
 
 const HEADERS = {
   "User-Agent":
@@ -130,10 +134,27 @@ async function fetchBinary(url: string): Promise<Buffer> {
   return Buffer.from(await res.arrayBuffer());
 }
 
-async function listCourts(): Promise<void> {
-  console.log(`Fetching court list: ${DATABASES_URL}`);
+/** Return court list from cache if fresh, otherwise fetch and cache. */
+async function getCourts(): Promise<Array<{ code: string; name: string }>> {
+  try {
+    const raw = await fs.readFile(COURTS_CACHE_PATH, "utf-8");
+    const cached = JSON.parse(raw) as CourtsCache;
+    if (Date.now() - cached.fetchedAt < COURTS_CACHE_TTL_MS) {
+      return cached.courts;
+    }
+  } catch {
+    // cache missing or unreadable — fall through to fetch
+  }
+
   const html = await fetchText(DATABASES_URL);
   const courts = parseCourts(html);
+  await fs.mkdir(path.dirname(COURTS_CACHE_PATH), { recursive: true });
+  await fs.writeFile(COURTS_CACHE_PATH, JSON.stringify({ fetchedAt: Date.now(), courts }, null, 2));
+  return courts;
+}
+
+async function listCourts(): Promise<void> {
+  const courts = await getCourts();
   console.log(`\nAvailable NZ courts (${courts.length}):\n`);
   for (const { code, name } of courts) {
     console.log(`  ${code.padEnd(20)} ${name}`);
