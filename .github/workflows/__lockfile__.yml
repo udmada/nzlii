@@ -3,21 +3,21 @@
 # It also gets updated by dependabot (see .github/dependabot.yml).
 # Generated from Workflow.pkl. DO NOT EDIT.
 name: __lockfile__
-'on':
+"on":
   push:
     branches-ignore:
-    - '**'
+      - "**"
     tags-ignore:
-    - '**'
+      - "**"
 permissions: {}
 jobs:
   locks:
-    if: 'false'
+    if: "false"
     runs-on: nothing
     steps:
-    - name: actions/checkout@v6
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-    - name: amannn/action-semantic-pull-request@v6
-      uses: amannn/action-semantic-pull-request@48f256284bd46cdaab1048c3721360e808335d50 # v6
-    - name: jdx/mise-action@v3
-      uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db # v3
+      - name: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - name: amannn/action-semantic-pull-request@v6
+        uses: amannn/action-semantic-pull-request@48f256284bd46cdaab1048c3721360e808335d50 # v6
+      - name: jdx/mise-action@v3
+        uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db # v3
