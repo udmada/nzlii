@@ -11,25 +11,69 @@ const DATABASES_URL = "https://www.nzlii.org/databases.html";
 const COURTS_CACHE_PATH = ".cache/courts.json";
 const COURTS_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
-type Court = { code: string; name: string };
-type CaseLink = { num: string; title: string; url: string };
-type CourtsCache = { fetchedAt: number; courts: Court[] };
-type Ok<T> = { ok: true; value: T };
-type Err = { ok: false; error: string };
+// --- Domain types (immutable) ---
+
+type Court = { readonly code: string; readonly name: string };
+type CaseLink = { readonly num: string; readonly title: string; readonly url: string };
+type CourtsCache = { readonly fetchedAt: number; readonly courts: readonly Court[] };
+
+// --- Result<T> ---
+
+type Ok<T> = { readonly ok: true; readonly value: T };
+type Err = { readonly ok: false; readonly error: string };
 type Result<T> = Ok<T> | Err;
 
 const ok = <T>(value: T): Ok<T> => ({ ok: true, value });
 const err = (error: string): Err => ({ ok: false, error });
+
+const matchResult = <T, U>(
+  result: Result<T>,
+  onOk: (value: T) => U,
+  onErr: (error: string) => U,
+): U => (result.ok ? onOk(result.value) : onErr(result.error));
+
+// --- Type utilities ---
+
+type TypeGuard<T> = (v: unknown) => v is T;
+
+const isRecord = (v: unknown): v is Record<string, unknown> =>
+  typeof v === "object" && v !== null && !Array.isArray(v);
+
+const isCourt: TypeGuard<Court> = (v): v is Court =>
+  isRecord(v) && typeof v["code"] === "string" && typeof v["name"] === "string";
+
+const isCourtsCache: TypeGuard<CourtsCache> = (v): v is CourtsCache =>
+  isRecord(v) &&
+  typeof v["fetchedAt"] === "number" &&
+  Array.isArray(v["courts"]) &&
+  (v["courts"] as unknown[]).every(isCourt);
+
+/** Safely parse a JSON file and narrow to T, returning null on failure or type mismatch. */
+const readJsonAs = async <T>(filePath: string, guard: TypeGuard<T>): Promise<T | null> => {
+  try {
+    const parsed: unknown = JSON.parse(await fs.readFile(filePath, "utf-8"));
+    return guard(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+
+/** Extract a message from an unknown thrown value without casting. */
+const toErrorMessage = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+
+// --- Constants ---
 
 const HEADERS = {
   "User-Agent":
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15",
   Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
   "Accept-Language": "en-NZ,en;q=0.9",
-};
+} as const;
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 const randomDelay = (): Promise<void> => sleep(1000 + Math.random() * 3000);
+
+// --- Pure parsing functions ---
 
 /** Extract NZ court codes and names from the databases page HTML. */
 export const parseCourts = (html: string): Court[] =>
@@ -102,6 +146,8 @@ export const extractText = (html: string): string => {
     .trim();
 };
 
+// --- I/O ---
+
 const fetchText = async (url: string): Promise<string> => {
   const res = await fetch(url, { headers: HEADERS });
   if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
@@ -114,12 +160,10 @@ const fetchBinary = async (url: string): Promise<Buffer> => {
   return Buffer.from(await res.arrayBuffer());
 };
 
-const getCourts = async (): Promise<Court[]> => {
-  try {
-    const cached = JSON.parse(await fs.readFile(COURTS_CACHE_PATH, "utf-8")) as CourtsCache;
-    if (Date.now() - cached.fetchedAt < COURTS_CACHE_TTL_MS) return cached.courts;
-  } catch {
-    // cache missing or unreadable — fall through to fetch
+const getCourts = async (): Promise<readonly Court[]> => {
+  const cached = await readJsonAs(COURTS_CACHE_PATH, isCourtsCache);
+  if (cached !== null && Date.now() - cached.fetchedAt < COURTS_CACHE_TTL_MS) {
+    return cached.courts;
   }
   const courts = parseCourts(await fetchText(DATABASES_URL));
   await fs.mkdir(path.dirname(COURTS_CACHE_PATH), { recursive: true });
@@ -144,9 +188,11 @@ const processCase = async (
     await fs.writeFile(dest, extractText(pageHtml), "utf-8");
     return ok(`TXT: ${dest}`);
   } catch (e) {
-    return err((e as Error).message);
+    return err(toErrorMessage(e));
   }
 };
+
+// --- Commands ---
 
 const listCourts = async (): Promise<void> => {
   const courts = await getCourts();
@@ -166,9 +212,11 @@ const scrape = async (court: string, year: string): Promise<void> => {
   for (const c of cases) {
     await randomDelay();
     console.log(`\n[${c.num}] ${c.title}`);
-    const result = await processCase(base, outputDir, c);
-    if (result.ok) console.log(`  -> ${result.value}`);
-    else console.error(`  ERROR: ${result.error}`);
+    matchResult(
+      await processCase(base, outputDir, c),
+      (msg) => console.log(`  -> ${msg}`),
+      (msg) => console.error(`  ERROR: ${msg}`),
+    );
   }
   console.log(`\nDone. Output: ${outputDir}`);
 };
@@ -177,7 +225,7 @@ const scrape = async (court: string, year: string): Promise<void> => {
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const [, , court, year] = process.argv;
   (court && year ? scrape(court, year) : listCourts()).catch((e) => {
-    console.error("Fatal:", e);
+    console.error("Fatal:", toErrorMessage(e));
     process.exit(1);
   });
 }
