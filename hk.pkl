@@ -1,20 +1,31 @@
 amends "package://github.com/jdx/hk/releases/download/v1.38.0/hk@1.38.0#/Config.pkl"
 
 hooks {
-    ["pre-commit"] {
-        steps {
-            ["typecheck"] {
-                glob = List("**/*.ts")
-                check = "mise run typecheck"
-            }
-            ["lint"] {
-                glob = List("**/*.ts", "**/*.js")
-                check = "mise run lint"
-            }
-            ["fmt-check"] {
-                glob = List("**/*.ts", "**/*.js")
-                check = "mise run fmt:check"
-            }
-        }
+  ["pre-commit"] {
+    steps {
+      ["typecheck"] {
+        glob = List("**/*.ts")
+        check = "mise run typecheck"
+      }
+      ["lint"] {
+        glob = List("**/*.ts", "**/*.js")
+        check = "mise run lint"
+      }
+      ["fmt-check"] {
+        glob = List("**/*.ts", "**/*.js")
+        check = "mise run fmt:check"
+      }
+      ["pkl-gen"] {
+        glob = ".github/pkl/**/*.*"
+        fix = "mise run pkl:gen && git add .github/"
+      }
     }
+  }
+  ["pre-push"] {
+    steps {
+      ["node-test"] {
+        check = "mise run test"
+      }
+    }
+  }
 }
