@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { cleanTitle, detectPdf, resolveUrl, parseCaseLinks } from "./scrape.ts";
+import { cleanTitle, detectPdf, resolveUrl, parseCaseLinks, extractText } from "./scrape.ts";
 
 const BASE = "https://www.nzlii.org/nz/cases/NZSC/2026";
 
@@ -61,6 +61,42 @@ void describe("resolveUrl", () => {
 
   void it("resolves relative URLs against base", () => {
     assert.equal(resolveUrl("5.txt", BASE), "https://www.nzlii.org/nz/cases/NZSC/2026/5.txt");
+  });
+});
+
+void describe("extractText", () => {
+  void it("extracts body between nzlii markers", () => {
+    const html = `
+      <nav>nav stuff</nav>
+      <!--make_database header end-->
+      <p>Judgment paragraph one.</p>
+      <p>Judgment paragraph two.</p>
+      <!--sino noindex-->
+      <footer>footer</footer>
+    `;
+    const text = extractText(html);
+    assert.ok(text.includes("Judgment paragraph one."));
+    assert.ok(text.includes("Judgment paragraph two."));
+    assert.ok(!text.includes("nav stuff"));
+    assert.ok(!text.includes("footer"));
+  });
+
+  void it("decodes HTML entities", () => {
+    const html = "<!--make_database header end--><p>Smith &amp; Jones</p><!--sino noindex-->";
+    assert.ok(extractText(html).includes("Smith & Jones"));
+  });
+
+  void it("falls back to full html when markers absent", () => {
+    const text = extractText("<p>Hello world</p>");
+    assert.ok(text.includes("Hello world"));
+  });
+
+  void it("strips script and style content", () => {
+    const html =
+      "<!--make_database header end--><script>alert(1)</script><p>Clean</p><!--sino noindex-->";
+    const text = extractText(html);
+    assert.ok(!text.includes("alert"));
+    assert.ok(text.includes("Clean"));
   });
 });
 

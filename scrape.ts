@@ -4,6 +4,7 @@
 
 import fs from "fs/promises";
 import path from "path";
+import { fileURLToPath } from "url";
 
 const COURT = process.argv[2] ?? "NZSC";
 const YEAR = process.argv[3] ?? "2026";
@@ -13,7 +14,7 @@ const OUTPUT_DIR = path.join("output", COURT, YEAR);
 
 const HEADERS = {
   "User-Agent":
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/178.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
   Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
   "Accept-Language": "en-NZ,en;q=0.9",
 };
@@ -27,12 +28,11 @@ function randomDelay(): Promise<void> {
   return sleep(1000 + Math.random() * 3000);
 }
 
-/** Extract (caseNum, rawTitle, relativeUrl) from the index page HTML */
+/** Extract (caseNum, title, url) tuples from the index page HTML. */
 export function parseCaseLinks(
   html: string,
   base: string,
 ): Array<{ num: string; title: string; url: string }> {
-  // Match: <a href="../2026/N.html">Title text</a>
   const pattern = /<a\s[^>]*href="[^"]*\/(\d+)\.html"[^>]*>([^<]+)<\/a>/gi;
   const results: Array<{ num: string; title: string; url: string }> = [];
   let match: RegExpExecArray | null;
@@ -40,17 +40,13 @@ export function parseCaseLinks(
     const num = match[1];
     const rawTitle = match[2]?.trim();
     if (!num || rawTitle === undefined) continue;
-    results.push({
-      num,
-      title: cleanTitle(rawTitle),
-      url: `${base}/${num}.html`,
-    });
+    results.push({ num, title: cleanTitle(rawTitle), url: `${base}/${num}.html` });
   }
   return results;
 }
 
 /**
- * Remove citation suffix from title.
+ * Strip citation suffix and unsafe filename chars from a raw case title.
  * "Body Corporate 207624 v Grimshaw & Co [2026] NZSC 5 (17 February 2026)"
  * → "Body Corporate 207624 v Grimshaw & Co"
  */
@@ -61,7 +57,7 @@ export function cleanTitle(raw: string): string {
     .trim();
 }
 
-/** Detect embedded PDF in page HTML. Returns href or null. */
+/** Detect embedded PDF in page HTML. Returns the href/src value or null. */
 export function detectPdf(html: string): string | null {
   const patterns = [
     /<object[^>]+data="([^"]+\.pdf)"[^>]*>/i,
@@ -75,11 +71,37 @@ export function detectPdf(html: string): string | null {
   return null;
 }
 
-/** Resolve a possibly root-relative URL against the site origin. */
+/** Resolve a root-relative or relative URL against the site origin. */
 export function resolveUrl(href: string, base: string): string {
   if (href.startsWith("http")) return href;
   if (href.startsWith("/")) return `https://www.nzlii.org${href}`;
   return `${base}/${href}`;
+}
+
+/**
+ * Extract readable plain text from an nzlii HTML decision page.
+ * Strips navigation headers/footers, script/style, then collapses tags to whitespace.
+ */
+export function extractText(html: string): string {
+  // Isolate the judgment body between the nzlii header/footer markers
+  const bodyMatch = /<!--make_database header end-->([\s\S]*?)<!--sino noindex-->/i.exec(html);
+  const body = bodyMatch?.[1] ?? html;
+
+  return body
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/?(p|div|tr|li|h[1-6])[^>]*>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&#\d+;/g, "")
+    .replace(/&[a-z]+;/gi, "")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 async function fetchText(url: string): Promise<string> {
@@ -119,8 +141,7 @@ async function main(): Promise<void> {
         await fs.writeFile(dest, data);
         console.log(`  -> PDF: ${dest}`);
       } else {
-        const txtUrl = resolveUrl(`${num}.txt`, BASE);
-        const text = await fetchText(txtUrl);
+        const text = extractText(pageHtml);
         const dest = path.join(OUTPUT_DIR, `${num} - ${title}.txt`);
         await fs.writeFile(dest, text, "utf-8");
         console.log(`  -> TXT: ${dest}`);
@@ -133,7 +154,10 @@ async function main(): Promise<void> {
   console.log(`\nDone. Output: ${OUTPUT_DIR}`);
 }
 
-main().catch((err) => {
-  console.error("Fatal:", err);
-  process.exit(1);
-});
+// Only run when executed directly, not when imported by tests
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main().catch((err) => {
+    console.error("Fatal:", err);
+    process.exit(1);
+  });
+}
