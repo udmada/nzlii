@@ -1,0 +1,24 @@
+[tools]
+"github:projectdiscovery/katana" = "latest"
+node = "24"
+pnpm = "latest"
+
+[tasks.scrape]
+description = "Run the NZLII scraper"
+run = "node --experimental-strip-types scrape.ts"
+
+[tasks.lint]
+description = "Lint with oxlint (type-aware)"
+run = "pnpm oxlint --tsconfig=tsconfig.json --type-aware ."
+
+[tasks.typecheck]
+description = "Type-check with tsc"
+run = "pnpm tsc --noEmit"
+
+[tasks.fmt]
+description = "Format with oxfmt"
+run = "pnpm oxfmt ."
+
+[tasks."fmt:check"]
+description = "Check formatting (CI)"
+run = "pnpm oxfmt --check ."
