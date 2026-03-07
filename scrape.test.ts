@@ -1,6 +1,13 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { cleanTitle, detectPdf, resolveUrl, parseCaseLinks, extractText } from "./scrape.ts";
+import {
+  cleanTitle,
+  detectPdf,
+  resolveUrl,
+  parseCaseLinks,
+  extractText,
+  parseCourts,
+} from "./scrape.ts";
 
 const BASE = "https://www.nzlii.org/nz/cases/NZSC/2026";
 
@@ -61,6 +68,31 @@ void describe("resolveUrl", () => {
 
   void it("resolves relative URLs against base", () => {
     assert.equal(resolveUrl("5.txt", BASE), "https://www.nzlii.org/nz/cases/NZSC/2026/5.txt");
+  });
+});
+
+void describe("parseCourts", () => {
+  const html = `
+    <li><a href="/nz/cases/NZSC/">Supreme Court of New Zealand 2004-</a></li>
+    <li><a href="/nz/cases/NZCA/">Court of Appeal of New Zealand 1867-</a></li>
+    <li><a href="/nz/cases/NZHC/">High Court of New Zealand 1847-</a></li>
+  `;
+
+  void it("extracts court codes", () => {
+    const courts = parseCourts(html);
+    assert.equal(courts.length, 3);
+    assert.equal(courts[0]?.code, "NZSC");
+    assert.equal(courts[1]?.code, "NZCA");
+    assert.equal(courts[2]?.code, "NZHC");
+  });
+
+  void it("extracts court names", () => {
+    const courts = parseCourts(html);
+    assert.equal(courts[0]?.name, "Supreme Court of New Zealand 2004-");
+  });
+
+  void it("returns empty for no matches", () => {
+    assert.deepEqual(parseCourts("<html></html>"), []);
   });
 });
 
