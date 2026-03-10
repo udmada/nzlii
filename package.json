@@ -11,12 +11,17 @@
     "typecheck": "tsc --noEmit",
     "test": "node --experimental-strip-types --test scrape.test.ts"
   },
+  "dependencies": {
+    "effect": "^3.19.19"
+  },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260310.1",
     "@types/node": "^25.3.5",
     "oxfmt": "^0.36.0",
     "oxlint": "^1.51.0",
     "oxlint-tsgolint": "^0.16.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "wrangler": "^4.71.0"
   },
   "packageManager": "pnpm@10.30.3"
 }

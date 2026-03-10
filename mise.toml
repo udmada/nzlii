@@ -35,3 +35,15 @@ run = "pnpm install --frozen-lockfile"
 [tasks."pkl:gen"]
 description = "Generate GitHub Actions YAML from pkl sources"
 run = "pkl eval -m .github/ --project-dir .github/pkl .github/pkl/index.pkl"
+
+[tasks.dev]
+run = "wrangler dev"
+
+[tasks.deploy]
+run = "wrangler deploy"
+
+[tasks."db:migrate"]
+run = "wrangler d1 execute nzill --file=schema.sql"
+
+[tasks."db:migrate:local"]
+run = "wrangler d1 execute nzill --local --file=schema.sql"
