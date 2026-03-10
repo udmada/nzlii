@@ -1,0 +1,55 @@
+name = "nzill"
+main = "src/index.ts"
+compatibility_date = "2025-11-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+COURTS = "NZSC,NZCA,NZHC"
+
+[triggers]
+crons = ["0 2 * * *"]
+
+[[workflows]]
+name = "orchestrator"
+binding = "ORCHESTRATOR"
+class_name = "OrchestratorWorkflow"
+script_name = "nzill"
+
+[[workflows]]
+name = "court-scrape"
+binding = "COURT_SCRAPE"
+class_name = "CourtScrapeWorkflow"
+script_name = "nzill"
+
+[[durable_objects.bindings]]
+name = "RATE_LIMITER"
+class_name = "RateLimiterDO"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["RateLimiterDO"]
+
+[[queues.producers]]
+binding = "SCRAPE_QUEUE"
+queue = "nzill-scrape"
+
+[[queues.consumers]]
+queue = "nzill-scrape"
+max_batch_size = 10
+max_retries = 3
+dead_letter_queue = "nzill-scrape-dlq"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "placeholder"
+preview_id = "placeholder"
+
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "nzill-decisions"
+preview_bucket_name = "nzill-decisions-preview"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "nzill"
+database_id = "placeholder"
