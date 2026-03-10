@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS cases (
   num        TEXT    NOT NULL,
   title      TEXT    NOT NULL,
   url        TEXT    NOT NULL,
-  status     TEXT    NOT NULL DEFAULT 'pending',
+  status     TEXT    NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'done', 'error')),
   r2_key     TEXT,
   error      TEXT,
   scraped_at INTEGER,

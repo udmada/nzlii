@@ -14,7 +14,7 @@ run = "pnpm oxlint --tsconfig=tsconfig.json --type-aware ."
 
 [tasks.typecheck]
 description = "Type-check with tsc"
-run = "pnpm tsc --noEmit"
+run = "pnpm tsc --noEmit && (ls src/*.ts src/**/*.ts 2>/dev/null | grep -q . && pnpm tsc --noEmit --project src/tsconfig.json || true)"
 
 [tasks.fmt]
 description = "Format with oxfmt"
