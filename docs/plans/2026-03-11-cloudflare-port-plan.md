@@ -6,7 +6,44 @@
 
 **Architecture:** A daily Cron fires `OrchestratorWorkflow` which spawns one `CourtScrapeWorkflow` per court×year (recent-first, skipping KV-flagged completed years). Each `CourtScrapeWorkflow` fetches the index, upserts cases into D1, and enqueues one Queue message per case. A Queue Consumer Worker processes each message: calls `RateLimiterDO` for a global token-bucket delay, fetches the decision, writes to R2, and updates D1.
 
-**Tech Stack:** TypeScript 7.0, Cloudflare Workers + Workflows + Queues + DO + KV + R2 + D1, wrangler (latest), pnpm, Node LTS via mise, oxlint (type-aware), oxfmt, node:test
+**Tech Stack:** TypeScript 7.0, Cloudflare Workers + Workflows + Queues + DO + KV + R2 + D1, wrangler (latest), pnpm, Node LTS via mise, oxlint (type-aware), oxfmt, node:test, Effect (optional, where it brings clarity)
+
+---
+
+## Code Style (apply throughout every task)
+
+These rules override any conflicting examples in the task bodies below.
+
+### Functional programming first
+
+- Pure functions everywhere possible — no side effects except at the explicit I/O boundary (KV/R2/D1/fetch calls)
+- `const` arrow functions, not `function` declarations
+- Prefer `map`, `flatMap`, `filter`, `reduce` over imperative loops
+- Compose with `pipe()` from Effect when chaining multiple transformations
+- Immutable data: `readonly` on all object types, `as const` for literal objects
+
+### Effect library
+
+- `effect` is a runtime dependency — add it in Task 1 (`pnpm add effect`)
+- Use `Effect<A, E, R>` for operations that can fail with typed errors instead of `Result<T>` where the extra type-safety is worth it
+- Use `Effect.tryPromise`, `Effect.map`, `Effect.flatMap`, `Effect.pipe`
+- Use `Schema` from `effect` for runtime validation instead of hand-rolled TypeGuards where practical
+- Do NOT use Effect if it adds boilerplate without clarity gain — the `Result<T>` pattern is still fine for simple cases
+
+### Type system
+
+- Use generics liberally — prefer `<T extends Record<string, unknown>>` over `object` or `unknown` where the shape is partially known
+- Branded types for IDs and keys where confusion is possible (e.g. `type R2Key = string & { readonly _brand: "R2Key" }`)
+- Discriminated unions over boolean flags
+- `satisfies` operator to validate literal objects against interfaces without widening
+- No `any` — use `unknown` + narrowing or `never` as appropriate
+- No force type casting (`as SomeType`) — use type guards, `satisfies`, or `Effect.Schema.decode`
+
+### No runtime casting exceptions
+
+- `as never` is allowed only in exhaustiveness checks (`satisfies never`)
+- `as unknown as T` is forbidden — if you need this, your types are wrong
+- `// @ts-expect-error` requires a comment explaining why it's unavoidable
 
 ---
 
@@ -21,11 +58,14 @@
 - Modify: `tsconfig.json`
 - Modify: `mise.toml`
 
-**Step 1: Add wrangler and workers-types to devDependencies**
+**Step 1: Add dependencies**
 
 ```bash
+pnpm add effect
 pnpm add -D wrangler @cloudflare/workers-types
 ```
+
+`effect` is a runtime dependency (bundled by wrangler). `wrangler` and `@cloudflare/workers-types` are dev-only.
 
 Expected: both appear in `package.json` devDependencies.
 
