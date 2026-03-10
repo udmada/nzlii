@@ -13,13 +13,11 @@ crons = ["0 2 * * *"]
 name = "orchestrator"
 binding = "ORCHESTRATOR"
 class_name = "OrchestratorWorkflow"
-script_name = "nzill"
 
 [[workflows]]
 name = "court-scrape"
 binding = "COURT_SCRAPE"
 class_name = "CourtScrapeWorkflow"
-script_name = "nzill"
 
 [[durable_objects.bindings]]
 name = "RATE_LIMITER"
