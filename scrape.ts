@@ -70,8 +70,24 @@ const HEADERS = {
   "Accept-Language": "en-NZ,en;q=0.9",
 } as const;
 
+const CONCURRENCY = 3; // parallel workers
+const MIN_FETCH_GAP_MS = 800; // minimum gap between any two HTTP requests
+const FETCH_JITTER_MS = 2000; // additional random jitter per request
+
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
-const randomDelay = (): Promise<void> => sleep(1000 + Math.random() * 3000);
+
+// --- Rate limiter ---
+//
+// Slots are reserved synchronously (before any await), so no two concurrent callers
+// can claim the same slot — safe because JS event loop is single-threaded.
+let nextFetchMs = 0;
+
+const waitForSlot = async (): Promise<void> => {
+  const startAt = Math.max(Date.now(), nextFetchMs);
+  nextFetchMs = startAt + MIN_FETCH_GAP_MS + Math.random() * FETCH_JITTER_MS;
+  const wait = startAt - Date.now();
+  if (wait > 0) await sleep(wait);
+};
 
 // --- Pure parsing functions ---
 
@@ -149,12 +165,14 @@ export const extractText = (html: string): string => {
 // --- I/O ---
 
 const fetchText = async (url: string): Promise<string> => {
+  await waitForSlot();
   const res = await fetch(url, { headers: HEADERS });
   if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
   return res.text();
 };
 
 const fetchBinary = async (url: string): Promise<Buffer> => {
+  await waitForSlot();
   const res = await fetch(url, { headers: HEADERS });
   if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
   return Buffer.from(await res.arrayBuffer());
@@ -171,11 +189,40 @@ const getCourts = async (): Promise<readonly Court[]> => {
   return courts;
 };
 
+// --- Concurrency ---
+
+/**
+ * Run `fn` over `items` with at most `limit` concurrent executions.
+ * queue.shift() is atomic in single-threaded JS, so no two workers claim the same item.
+ */
+const runConcurrent = async <T>(
+  items: readonly T[],
+  limit: number,
+  fn: (item: T) => Promise<void>,
+): Promise<void> => {
+  const queue = [...items];
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, async () => {
+      while (queue.length > 0) {
+        const item = queue.shift();
+        if (item !== undefined) await fn(item);
+      }
+    }),
+  );
+};
+
 const processCase = async (
   base: string,
   outputDir: string,
   { num, title, url }: CaseLink,
 ): Promise<Result<string>> => {
+  // Resume: skip if any file for this case number already exists in outputDir.
+  const existing = await fs
+    .readdir(outputDir)
+    .then((files) => files.find((f) => f.startsWith(`${num} - `)))
+    .catch(() => undefined);
+  if (existing) return ok(`SKIP (${existing})`);
+
   try {
     const pageHtml = await fetchText(url);
     const pdfHref = detectPdf(pageHtml);
@@ -208,16 +255,17 @@ const scrape = async (court: string, year: string): Promise<void> => {
   await fs.mkdir(outputDir, { recursive: true });
   console.log(`Fetching index: ${base}/`);
   const cases = parseCaseLinks(await fetchText(`${base}/`), base);
-  console.log(`Found ${cases.length} case(s)`);
-  for (const c of cases) {
-    await randomDelay();
+  console.log(
+    `Found ${cases.length} case(s). Workers: ${CONCURRENCY}, gap: ${MIN_FETCH_GAP_MS}–${MIN_FETCH_GAP_MS + FETCH_JITTER_MS}ms`,
+  );
+  await runConcurrent(cases, CONCURRENCY, async (c) => {
     console.log(`\n[${c.num}] ${c.title}`);
     matchResult(
       await processCase(base, outputDir, c),
       (msg) => console.log(`  -> ${msg}`),
       (msg) => console.error(`  ERROR: ${msg}`),
     );
-  }
+  });
   console.log(`\nDone. Output: ${outputDir}`);
 };
 
