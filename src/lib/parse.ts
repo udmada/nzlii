@@ -1,13 +1,13 @@
 import type { Court, CaseLink } from "../types.ts";
 
 /** Extract NZ court codes and names from the databases page HTML. */
-export const parseCourts = (html: string): Court[] =>
+export const parseCourts = (html: string): readonly Court[] =>
   [...html.matchAll(/href="\/nz\/cases\/([^/]+)\/"[^>]*>([^<]+)<\/a>/gi)].flatMap(
     ([, code, name]) => (code && name ? [{ code, name: name.trim() }] : []),
   );
 
 /** Extract (caseNum, title, url) tuples from the index page HTML. */
-export const parseCaseLinks = (html: string, base: string): CaseLink[] =>
+export const parseCaseLinks = (html: string, base: string): readonly CaseLink[] =>
   [...html.matchAll(/<a\s[^>]*href="[^"]*\/(\d+)\.html"[^>]*>([^<]+)<\/a>/gi)].flatMap(
     ([, num, rawTitle]) =>
       num && rawTitle
