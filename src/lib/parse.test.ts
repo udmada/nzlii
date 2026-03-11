@@ -28,7 +28,7 @@ void describe("parseCourts", () => {
 void describe("parseCaseLinks", () => {
   void it("extracts case num, title, and full url", () => {
     const html = `<a href="/nz/cases/NZSC/2026/1.html">Smith v Jones [2026] NZSC 1</a>`;
-    const base = "https://www.nzlii.org/nz/cases/NZSC/2026";
+    const base = "http://www.nzlii.org/nz/cases/NZSC/2026";
     const links = parseCaseLinks(html, base);
     assert.equal(links.length, 1);
     assert.equal(links[0]?.num, "1");
@@ -71,20 +71,17 @@ void describe("detectPdf", () => {
 void describe("resolveUrl", () => {
   void it("returns absolute URLs unchanged", () => {
     assert.equal(
-      resolveUrl("https://example.com/file.pdf", "https://base.com"),
-      "https://example.com/file.pdf",
+      resolveUrl("http://example.com/file.pdf", "http://base.com"),
+      "http://example.com/file.pdf",
     );
   });
 
   void it("prepends origin for root-relative paths", () => {
-    assert.equal(
-      resolveUrl("/nz/file.pdf", "https://base.com"),
-      "https://www.nzlii.org/nz/file.pdf",
-    );
+    assert.equal(resolveUrl("/nz/file.pdf", "http://base.com"), "http://www.nzlii.org/nz/file.pdf");
   });
 
   void it("appends relative paths to base", () => {
-    assert.equal(resolveUrl("file.pdf", "https://base.com/nz"), "https://base.com/nz/file.pdf");
+    assert.equal(resolveUrl("file.pdf", "http://base.com/nz"), "http://base.com/nz/file.pdf");
   });
 });
 

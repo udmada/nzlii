@@ -192,7 +192,7 @@ import path from "path";
 
 const COURT = process.argv[2] ?? "NZSC";
 const YEAR = process.argv[3] ?? "2026";
-const BASE = `https://www.nzlii.org/nz/cases/${COURT}/${YEAR}`;
+const BASE = `http://www.nzlii.org/nz/cases/${COURT}/${YEAR}`;
 const INDEX_URL = `${BASE}/`;
 const OUTPUT_DIR = path.join("output", COURT, YEAR);
 
@@ -263,7 +263,7 @@ function detectPdf(html: string): string | null {
 /** Resolve a possibly root-relative URL against the site origin. */
 function resolveUrl(href: string): string {
   if (href.startsWith("http")) return href;
-  if (href.startsWith("/")) return `https://www.nzlii.org${href}`;
+  if (href.startsWith("/")) return `http://www.nzlii.org${href}`;
   return `${BASE}/${href}`;
 }
 

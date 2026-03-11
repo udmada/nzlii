@@ -1,7 +1,17 @@
 name = "nzill"
 main = "src/index.ts"
-compatibility_date = "2025-11-01"
+compatibility_date = "2026-02-24"
 compatibility_flags = ["nodejs_compat"]
+
+[observability.logs]
+enabled = true
+invocation_logs = true
+
+[observability.traces]
+enabled = true
+
+[placement]
+mode = "smart"
 
 [vars]
 COURTS = "NZSC,NZCA,NZHC"

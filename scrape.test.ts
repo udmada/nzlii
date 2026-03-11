@@ -10,7 +10,7 @@ import {
   parseCourts,
 } from "./scrape.ts";
 
-const BASE = "https://www.nzlii.org/nz/cases/NZSC/2026";
+const BASE = "http://www.nzlii.org/nz/cases/NZSC/2026";
 
 void describe("cleanTitle", () => {
   void it("strips citation suffix", () => {
@@ -57,18 +57,18 @@ void describe("detectPdf", () => {
 
 void describe("resolveUrl", () => {
   void it("passes through absolute URLs", () => {
-    assert.equal(resolveUrl("https://example.com/file.pdf", BASE), "https://example.com/file.pdf");
+    assert.equal(resolveUrl("http://example.com/file.pdf", BASE), "http://example.com/file.pdf");
   });
 
   void it("resolves root-relative URLs", () => {
     assert.equal(
       resolveUrl("/nz/cases/NZSC/2026/4.pdf", BASE),
-      "https://www.nzlii.org/nz/cases/NZSC/2026/4.pdf",
+      "http://www.nzlii.org/nz/cases/NZSC/2026/4.pdf",
     );
   });
 
   void it("resolves relative URLs against base", () => {
-    assert.equal(resolveUrl("5.txt", BASE), "https://www.nzlii.org/nz/cases/NZSC/2026/5.txt");
+    assert.equal(resolveUrl("5.txt", BASE), "http://www.nzlii.org/nz/cases/NZSC/2026/5.txt");
   });
 });
 

@@ -24,6 +24,20 @@ export const saveCourts = async (kv: KVNamespace, courts: readonly Court[]): Pro
 export const isYearDone = async (kv: KVNamespace, court: string, year: number): Promise<boolean> =>
   (await kv.get(`done:${court}:${year}`)) === "1";
 
+/** Fetch all completed years for a court in one KV list call. */
+export const getDoneYears = async (
+  kv: KVNamespace,
+  court: string,
+): Promise<ReadonlySet<number>> => {
+  const result = await kv.list({ prefix: `done:${court}:` });
+  return new Set(
+    result.keys.flatMap((k) => {
+      const year = Number(k.name.split(":")[2]);
+      return Number.isFinite(year) ? [year] : [];
+    }),
+  );
+};
+
 export const markYearDone = async (kv: KVNamespace, court: string, year: number): Promise<void> => {
   await kv.put(`done:${court}:${year}`, "1");
 };

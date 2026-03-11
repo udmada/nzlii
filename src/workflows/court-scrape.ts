@@ -18,7 +18,7 @@ type CourtScrapeParams = { readonly court: string; readonly year: number };
 export class CourtScrapeWorkflow extends WorkflowEntrypoint<Env, CourtScrapeParams> {
   async run(event: WorkflowEvent<CourtScrapeParams>, step: WorkflowStep): Promise<void> {
     const { court, year } = event.payload;
-    const base = `https://www.nzlii.org/nz/cases/${court}/${year}`;
+    const base = `http://www.nzlii.org/nz/cases/${court}/${year}`;
 
     const cases = await step.do("fetch-index", async () => {
       const res = await fetch(`${base}/`, { headers: HEADERS });

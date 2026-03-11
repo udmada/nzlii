@@ -352,7 +352,7 @@ describe("parseCourts", () => {
 describe("parseCaseLinks", () => {
   it("extracts case num, title, and full url", () => {
     const html = `<a href="/nz/cases/NZSC/2026/1.html">Smith v Jones [2026] NZSC 1</a>`;
-    const base = "https://www.nzlii.org/nz/cases/NZSC/2026";
+    const base = "http://www.nzlii.org/nz/cases/NZSC/2026";
     const links = parseCaseLinks(html, base);
     assert.equal(links.length, 1);
     assert.equal(links[0]?.num, "1");
@@ -395,20 +395,17 @@ describe("detectPdf", () => {
 describe("resolveUrl", () => {
   it("returns absolute URLs unchanged", () => {
     assert.equal(
-      resolveUrl("https://example.com/file.pdf", "https://base.com"),
-      "https://example.com/file.pdf",
+      resolveUrl("http://example.com/file.pdf", "http://base.com"),
+      "http://example.com/file.pdf",
     );
   });
 
   it("prepends origin for root-relative paths", () => {
-    assert.equal(
-      resolveUrl("/nz/file.pdf", "https://base.com"),
-      "https://www.nzlii.org/nz/file.pdf",
-    );
+    assert.equal(resolveUrl("/nz/file.pdf", "http://base.com"), "http://www.nzlii.org/nz/file.pdf");
   });
 
   it("appends relative paths to base", () => {
-    assert.equal(resolveUrl("file.pdf", "https://base.com/nz"), "https://base.com/nz/file.pdf");
+    assert.equal(resolveUrl("file.pdf", "http://base.com/nz"), "http://base.com/nz/file.pdf");
   });
 });
 
@@ -487,7 +484,7 @@ export const resolveUrl = (href: string, base: string): string =>
   href.startsWith("http")
     ? href
     : href.startsWith("/")
-      ? `https://www.nzlii.org${href}`
+      ? `http://www.nzlii.org${href}`
       : `${base}/${href}`;
 
 /**
@@ -899,15 +896,15 @@ const makeD1 = (rows: Row[] = []) => {
 describe("upsertCase", () => {
   it("inserts a new case with pending status", async () => {
     const db = makeD1();
-    await upsertCase(db as never, "NZSC", 2026, "1", "Smith v Jones", "https://example.com/1.html");
+    await upsertCase(db as never, "NZSC", 2026, "1", "Smith v Jones", "http://example.com/1.html");
     assert.equal(db.rows.length, 1);
     assert.equal(db.rows[0]?.["status"], "pending");
   });
 
   it("does not duplicate on second insert", async () => {
     const db = makeD1();
-    await upsertCase(db as never, "NZSC", 2026, "1", "Smith v Jones", "https://example.com/1.html");
-    await upsertCase(db as never, "NZSC", 2026, "1", "Smith v Jones", "https://example.com/1.html");
+    await upsertCase(db as never, "NZSC", 2026, "1", "Smith v Jones", "http://example.com/1.html");
+    await upsertCase(db as never, "NZSC", 2026, "1", "Smith v Jones", "http://example.com/1.html");
     assert.equal(db.rows.length, 1);
   });
 });
@@ -1138,7 +1135,7 @@ type Params = { readonly court: string; readonly year: number };
 export class CourtScrapeWorkflow extends WorkflowEntrypoint<Env, Params> {
   async run(event: WorkflowEvent<Params>, step: WorkflowStep): Promise<void> {
     const { court, year } = event.payload;
-    const base = `https://www.nzlii.org/nz/cases/${court}/${year}`;
+    const base = `http://www.nzlii.org/nz/cases/${court}/${year}`;
 
     const cases = await step.do("fetch-index", async () => {
       const res = await fetch(`${base}/`, { headers: HEADERS });
@@ -1208,7 +1205,7 @@ import type { Env } from "../types.ts";
 import { getCourts, saveCourts, isYearDone } from "../lib/kv.ts";
 import { parseCourts } from "../lib/parse.ts";
 
-const DATABASES_URL = "https://www.nzlii.org/databases.html";
+const DATABASES_URL = "http://www.nzlii.org/databases.html";
 const SCRAPE_FROM_YEAR = 2000;
 
 const HEADERS = {
@@ -1312,7 +1309,7 @@ const processCase = async (
   msg: QueueMessage,
 ): Promise<ReturnType<typeof ok<string> | typeof err>> => {
   const { court, year, num, title, url } = msg;
-  const base = `https://www.nzlii.org/nz/cases/${court}/${year}`;
+  const base = `http://www.nzlii.org/nz/cases/${court}/${year}`;
 
   try {
     // Deduplicate via R2 HEAD
