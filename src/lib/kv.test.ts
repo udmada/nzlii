@@ -20,20 +20,20 @@ const makeKV = (store: Record<string, string> = {}) => ({
   getWithMetadata: async (key: string) => ({ value: store[key] ?? null, metadata: null }),
 });
 
-describe("getCourts", () => {
-  it("returns null when no cache exists", async () => {
+void describe("getCourts", () => {
+  void it("returns null when no cache exists", async () => {
     const kv = makeKV();
     assert.equal(await getCourts(kv as never), null);
   });
 
-  it("returns null when cache is expired (> 7 days)", async () => {
+  void it("returns null when cache is expired (> 7 days)", async () => {
     const kv = makeKV({
       courts: JSON.stringify({ fetchedAt: Date.now() - 8 * 24 * 60 * 60 * 1000, courts: [] }),
     });
     assert.equal(await getCourts(kv as never), null);
   });
 
-  it("returns courts when cache is fresh", async () => {
+  void it("returns courts when cache is fresh", async () => {
     const courts = [{ code: "NZSC", name: "Supreme Court" }];
     const kv = makeKV({
       courts: JSON.stringify({ fetchedAt: Date.now(), courts }),
@@ -41,14 +41,14 @@ describe("getCourts", () => {
     assert.deepEqual(await getCourts(kv as never), courts);
   });
 
-  it("returns null when cached data has wrong shape", async () => {
+  void it("returns null when cached data has wrong shape", async () => {
     const kv = makeKV({ courts: JSON.stringify({ wrong: "shape" }) });
     assert.equal(await getCourts(kv as never), null);
   });
 });
 
-describe("saveCourts", () => {
-  it("writes courts with current timestamp", async () => {
+void describe("saveCourts", () => {
+  void it("writes courts with current timestamp", async () => {
     const kv = makeKV();
     const courts = [{ code: "NZSC", name: "Supreme Court" }];
     await saveCourts(kv as never, courts);
@@ -61,19 +61,19 @@ describe("saveCourts", () => {
   });
 });
 
-describe("isYearDone / markYearDone", () => {
-  it("returns false when not marked", async () => {
+void describe("isYearDone / markYearDone", () => {
+  void it("returns false when not marked", async () => {
     const kv = makeKV();
     assert.equal(await isYearDone(kv as never, "NZSC", 2020), false);
   });
 
-  it("returns true after marking done", async () => {
+  void it("returns true after marking done", async () => {
     const kv = makeKV();
     await markYearDone(kv as never, "NZSC", 2020);
     assert.equal(await isYearDone(kv as never, "NZSC", 2020), true);
   });
 
-  it("keys are scoped by court and year", async () => {
+  void it("keys are scoped by court and year", async () => {
     const kv = makeKV();
     await markYearDone(kv as never, "NZSC", 2020);
     assert.equal(await isYearDone(kv as never, "NZCA", 2020), false);

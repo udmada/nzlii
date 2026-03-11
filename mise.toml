@@ -26,7 +26,7 @@ run = "pnpm oxfmt --check ."
 
 [tasks.test]
 description = "Run unit tests"
-run = "node --experimental-strip-types --test scrape.test.ts src/lib/parse.test.ts src/lib/kv.test.ts"
+run = "node --experimental-strip-types --test scrape.test.ts src/lib/parse.test.ts src/lib/kv.test.ts src/lib/r2.test.ts"
 
 [tasks.install]
 description = "Install dependencies (frozen)"
