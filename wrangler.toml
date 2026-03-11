@@ -39,8 +39,8 @@ dead_letter_queue = "nzill-scrape-dlq"
 
 [[kv_namespaces]]
 binding = "KV"
-id = "placeholder"
-preview_id = "placeholder"
+id = "42baa9e4570640adbfd0348ea9dc8a36"
+preview_id = "811f50f714e541b58727df2a8e3010a8"
 
 [[r2_buckets]]
 binding = "R2"
@@ -50,4 +50,4 @@ preview_bucket_name = "nzill-decisions-preview"
 [[d1_databases]]
 binding = "DB"
 database_name = "nzill"
-database_id = "placeholder"
+database_id = "a9694479-ce1f-4377-9b99-6c0813b3e074"
