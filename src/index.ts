@@ -4,13 +4,13 @@ import type {
   MessageBatch,
   ScheduledController,
 } from "@cloudflare/workers-types";
-import { Effect } from "effect";
+import { Effect, Schema } from "effect";
 import type { Env, QueueMessage, ScraperError } from "./types.ts";
-import { fetchError, storageError, toErrorMessage } from "./types.ts";
+import { fetchError, storageError, toErrorMessage, QueueMessageSchema } from "./types.ts";
 import { detectPdf, resolveUrl, extractText } from "./lib/parse.ts";
 import { getCourts } from "./lib/kv.ts";
 import { headObject, putText, putBinary, makeR2Key } from "./lib/r2.ts";
-import { markDone, queryCases } from "./lib/d1.ts";
+import { markDone, markError, queryCases } from "./lib/d1.ts";
 
 // Re-export Workflow and DO classes so wrangler can bind them
 export { OrchestratorWorkflow } from "./workflows/orchestrator.ts";
@@ -27,6 +27,8 @@ const HEADERS = {
   Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
   "Accept-Language": "en-NZ,en;q=0.9",
 } as const;
+
+const isQueueMessage = Schema.is(QueueMessageSchema);
 
 // ---------------------------------------------------------------------------
 // RateLimiter DO stub interface
@@ -51,6 +53,9 @@ const processCase = (env: Env, msg: QueueMessage): Effect.Effect<string, Scraper
     try: () => Promise.all([headObject(env.R2, txtKey), headObject(env.R2, pdfKey)]),
     catch: (e) => storageError(toErrorMessage(e)),
   });
+
+  const errorMsg = (e: ScraperError): string =>
+    e._tag === "FetchError" ? `HTTP ${e.status} for ${e.url}` : e.message;
 
   return Effect.flatMap(checkExists, ([txtExists, pdfExists]) => {
     if (txtExists || pdfExists) {
@@ -120,7 +125,7 @@ const processCase = (env: Env, msg: QueueMessage): Effect.Effect<string, Scraper
         );
       });
     });
-  });
+  }).pipe(Effect.tapError((e) => markError(env.DB, court, year, num, errorMsg(e))));
 };
 
 // ---------------------------------------------------------------------------
@@ -141,7 +146,12 @@ const queue = async (batch: MessageBatch<unknown>, env: Env): Promise<void> => {
   ) as unknown as RateLimiterStub;
   for (const msg of batch.messages) {
     await stub.waitForSlot();
-    const body = msg.body as QueueMessage;
+    if (!isQueueMessage(msg.body)) {
+      console.error("Invalid queue message shape:", msg.body);
+      msg.ack();
+      continue;
+    }
+    const body: QueueMessage = msg.body;
     const result = await Effect.runPromise(Effect.either(processCase(env, body)));
     if (result._tag === "Left") {
       console.error(`ERROR ${body.court}/${body.year}/${body.num}:`, result.left);
