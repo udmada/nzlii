@@ -244,7 +244,7 @@ const processCase = async (
 const listCourts = async (): Promise<void> => {
   const courts = await getCourts();
   console.log(`\nAvailable NZ courts (${courts.length}):\n`);
-  courts.forEach(({ code, name }) => console.log(`  ${code.padEnd(20)} ${name}`));
+  courts.forEach(({ code, name }) =>{  console.log(`  ${code.padEnd(20)} ${name}`); });
   console.log(`\nUsage: mise run scrape <COURT> <YEAR>`);
   console.log(`Example: mise run scrape NZSC 2026`);
 };
@@ -262,8 +262,8 @@ const scrape = async (court: string, year: string): Promise<void> => {
     console.log(`\n[${c.num}] ${c.title}`);
     matchResult(
       await processCase(base, outputDir, c),
-      (msg) => console.log(`  -> ${msg}`),
-      (msg) => console.error(`  ERROR: ${msg}`),
+      (msg) =>{  console.log(`  -> ${msg}`); },
+      (msg) =>{  console.error(`  ERROR: ${msg}`); },
     );
   });
   console.log(`\nDone. Output: ${outputDir}`);

@@ -143,7 +143,7 @@ const scheduled = async (
   ctx.waitUntil(env.ORCHESTRATOR.create({}));
 };
 
-const queue = async (batch: MessageBatch<unknown>, env: Env): Promise<void> => {
+const queue = async (batch: MessageBatch, env: Env): Promise<void> => {
   const stub = env.RATE_LIMITER.get(
     env.RATE_LIMITER.idFromName("global"),
   ) as unknown as RateLimiterStub;
