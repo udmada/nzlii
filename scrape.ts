@@ -94,14 +94,14 @@ const waitForSlot = async (): Promise<void> => {
 /** Extract NZ court codes and names from the databases page HTML. */
 export const parseCourts = (html: string): Court[] =>
   [...html.matchAll(/href="\/nz\/cases\/([^/]+)\/"[^>]*>([^<]+)<\/a>/gi)].flatMap(
-    ([, code, name]) => (code && name ? [{ code, name: name.trim() }] : []),
+    ([, code, name]) => (code != null && name != null ? [{ code, name: name.trim() }] : []),
   );
 
 /** Extract (caseNum, title, url) tuples from the index page HTML. */
 export const parseCaseLinks = (html: string, base: string): CaseLink[] =>
   [...html.matchAll(/<a\s[^>]*href="[^"]*\/(\d+)\.html"[^>]*>([^<]+)<\/a>/gi)].flatMap(
     ([, num, rawTitle]) =>
-      num && rawTitle
+      num != null && rawTitle != null
         ? [{ num, title: cleanTitle(rawTitle.trim()), url: `${base}/${num}.html` }]
         : [],
   );
@@ -221,12 +221,12 @@ const processCase = async (
     .readdir(outputDir)
     .then((files) => files.find((f) => f.startsWith(`${num} - `)))
     .catch(() => undefined);
-  if (existing) return ok(`SKIP (${existing})`);
+  if (existing != null) return ok(`SKIP (${existing})`);
 
   try {
     const pageHtml = await fetchText(url);
     const pdfHref = detectPdf(pageHtml);
-    if (pdfHref) {
+    if (pdfHref !== null) {
       const dest = path.join(outputDir, `${num} - ${title}.pdf`);
       await fs.writeFile(dest, await fetchBinary(resolveUrl(pdfHref, base)));
       return ok(`PDF: ${dest}`);
@@ -244,7 +244,9 @@ const processCase = async (
 const listCourts = async (): Promise<void> => {
   const courts = await getCourts();
   console.log(`\nAvailable NZ courts (${courts.length}):\n`);
-  courts.forEach(({ code, name }) =>{  console.log(`  ${code.padEnd(20)} ${name}`); });
+  courts.forEach(({ code, name }) => {
+    console.log(`  ${code.padEnd(20)} ${name}`);
+  });
   console.log(`\nUsage: mise run scrape <COURT> <YEAR>`);
   console.log(`Example: mise run scrape NZSC 2026`);
 };
@@ -262,8 +264,12 @@ const scrape = async (court: string, year: string): Promise<void> => {
     console.log(`\n[${c.num}] ${c.title}`);
     matchResult(
       await processCase(base, outputDir, c),
-      (msg) =>{  console.log(`  -> ${msg}`); },
-      (msg) =>{  console.error(`  ERROR: ${msg}`); },
+      (msg) => {
+        console.log(`  -> ${msg}`);
+      },
+      (msg) => {
+        console.error(`  ERROR: ${msg}`);
+      },
     );
   });
   console.log(`\nDone. Output: ${outputDir}`);
@@ -272,7 +278,7 @@ const scrape = async (court: string, year: string): Promise<void> => {
 // Only run when executed directly, not when imported by tests
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const [, , court, year] = process.argv;
-  (court && year ? scrape(court, year) : listCourts()).catch((e) => {
+  (court != null && year != null ? scrape(court, year) : listCourts()).catch((e: unknown) => {
     console.error("Fatal:", toErrorMessage(e));
     process.exit(1);
   });

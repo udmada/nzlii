@@ -10,8 +10,15 @@ import { markDone, markError, queryCases } from "./lib/d1.ts";
 import { getCourts, saveCourts } from "./lib/kv.ts";
 import { detectPdf, resolveUrl, extractText, parseCourts } from "./lib/parse.ts";
 import { headObject, putText, putBinary, makeR2Key } from "./lib/r2.ts";
-import type { Env, QueueMessage, ScraperError } from "./types.ts";
-import { fetchError, storageError, toErrorMessage, QueueMessageSchema } from "./types.ts";
+import {
+  type Env,
+  type QueueMessage,
+  type ScraperError,
+  fetchError,
+  storageError,
+  toErrorMessage,
+  QueueMessageSchema,
+} from "./types.ts";
 
 // Re-export Workflow and DO classes so wrangler can bind them
 export { OrchestratorWorkflow } from "./workflows/orchestrator.ts";
@@ -203,7 +210,7 @@ const handleFetch = async (request: Request, env: Env): Promise<Response> => {
   if (request.method === "GET" && pathname === "/decisions") {
     const court = url.searchParams.get("court");
     const yearStr = url.searchParams.get("year");
-    if (!court || !yearStr) {
+    if (court === null || yearStr === null) {
       return new Response("Missing court or year query param", { status: 400 });
     }
     const year = Number(yearStr);
@@ -221,7 +228,7 @@ const handleFetch = async (request: Request, env: Env): Promise<Response> => {
   const decisionMatch = /^\/decisions\/([^/]+)\/(\d+)\/([^/]+)$/.exec(pathname);
   if (request.method === "GET" && decisionMatch !== null) {
     const [, court, yearStr, num] = decisionMatch;
-    if (!court || !yearStr || !num) {
+    if (court == null || yearStr == null || num == null) {
       return new Response("Not found", { status: 404 });
     }
     const year = Number(yearStr);

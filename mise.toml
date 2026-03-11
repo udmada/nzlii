@@ -10,11 +10,11 @@ run = "node --experimental-strip-types scrape.ts"
 
 [tasks.lint]
 description = "Lint with oxlint (type-aware)"
-run = "pnpm oxlint --fix"
+run = "pnpm oxlint --type-aware --fix"
 
 [tasks.typecheck]
 description = "Type-check with tsc"
-run = "pnpm exec oxlint"
+run = "pnpm exec oxlint --type-check --type-aware"
 
 [tasks.fmt]
 description = "Format with oxfmt"
