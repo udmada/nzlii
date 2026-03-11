@@ -24,5 +24,15 @@
     "typescript/prefer-promise-reject-errors": "warn",
     "typescript/strict-boolean-expressions": "error",
     "typescript/use-unknown-in-catch-callback-variable": "warn"
-  }
+  },
+  "overrides": [
+    {
+      "files": ["*.test.ts"],
+      "rules": {
+        "typescript/no-unsafe-type-assertion": "off",
+        "typescript/no-unsafe-member-access": "off",
+        "typescript/no-unsafe-assignment": "off"
+      }
+    }
+  ]
 }

@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mise exec:*)",
+      "Bash(curl:*)",
+      "Bash(mise run:*)",
+      "Bash(git add:*)",
+      "Bash(git -C /Users/Adam.Du/Developer/nzill add src/objects/rate-limiter.ts && git -C /Users/Adam.Du/Developer/nzill commit -m \"feat: add RateLimiterDO \\(global token bucket for nzlii.org\\)\" 2>&1)",
+      "Bash(grep -r \"WorkflowEntrypoint\\\\|WorkflowEvent\\\\|WorkflowStep\" node_modules/@cloudflare/workers-types/ --include=\"*.d.ts\" -l 2>/dev/null | head -5)",
+      "Bash(git -C /Users/Adam.Du/Developer/nzill add src/workflows/orchestrator.ts && git -C /Users/Adam.Du/Developer/nzill commit -m \"feat: add OrchestratorWorkflow \\(fan-out per court×year, recent-first\\)\")"
+    ]
+  }
+}
