@@ -3,3 +3,7 @@ output/
 .cache/
 .DS_Store
 .pkl-lsp/
+.wrangler/
+.vscode/
+.idea/
+*.log
