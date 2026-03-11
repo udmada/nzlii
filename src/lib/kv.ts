@@ -1,8 +1,7 @@
 import type { KVNamespace } from "@cloudflare/workers-types";
 import { Schema } from "effect";
 
-import { CourtsCacheSchema } from "../types.ts";
-import type { Court, CourtsCache } from "../types.ts";
+import { CourtsCacheSchema, type Court, type CourtsCache } from "../types.ts";
 
 const COURTS_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
