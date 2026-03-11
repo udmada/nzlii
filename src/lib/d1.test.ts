@@ -77,7 +77,7 @@ void describe("upsertCase", () => {
   void it("inserts a new case with pending status", async () => {
     const db = makeD1();
     await Effect.runPromise(
-      upsertCase(db as never, "NZSC", 2026, "1", "Smith v Jones", "https://example.com/1.html"),
+      upsertCase(db as never, "NZSC", 2026, "1", "Smith v Jones", "http://example.com/1.html"),
     );
     assert.equal(db.rows.length, 1);
     assert.equal(db.rows[0]?.status, "pending");
@@ -86,10 +86,10 @@ void describe("upsertCase", () => {
   void it("does not duplicate on second insert", async () => {
     const db = makeD1();
     await Effect.runPromise(
-      upsertCase(db as never, "NZSC", 2026, "1", "Smith v Jones", "https://example.com/1.html"),
+      upsertCase(db as never, "NZSC", 2026, "1", "Smith v Jones", "http://example.com/1.html"),
     );
     await Effect.runPromise(
-      upsertCase(db as never, "NZSC", 2026, "1", "Smith v Jones", "https://example.com/1.html"),
+      upsertCase(db as never, "NZSC", 2026, "1", "Smith v Jones", "http://example.com/1.html"),
     );
     assert.equal(db.rows.length, 1);
   });

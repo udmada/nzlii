@@ -100,7 +100,7 @@ D1 serves two purposes:
 ### `CourtScrapeWorkflow`
 
 - Receives `{ court: string, year: number }`
-- `step("fetch-index")`: fetches `https://www.nzlii.org/nz/cases/{court}/{year}/`, parses case links, upserts all rows into D1 as `pending`
+- `step("fetch-index")`: fetches `http://www.nzlii.org/nz/cases/{court}/{year}/`, parses case links, upserts all rows into D1 as `pending`
 - `step("enqueue")`: pushes one Queue message per case
 - `step("mark-done")`: if `year < currentYear`, writes `done:{court}:{year}` to KV
 - Workflow ID: `{court}-{year}-{isoDate}` for deduplication and resumability

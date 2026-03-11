@@ -7,7 +7,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const DATABASES_URL = "https://www.nzlii.org/databases.html";
+const DATABASES_URL = "http://www.nzlii.org/databases.html";
 const COURTS_CACHE_PATH = ".cache/courts.json";
 const COURTS_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -135,7 +135,7 @@ export const resolveUrl = (href: string, base: string): string =>
   href.startsWith("http")
     ? href
     : href.startsWith("/")
-      ? `https://www.nzlii.org${href}`
+      ? `http://www.nzlii.org${href}`
       : `${base}/${href}`;
 
 /**
@@ -252,7 +252,7 @@ const listCourts = async (): Promise<void> => {
 };
 
 const scrape = async (court: string, year: string): Promise<void> => {
-  const base = `https://www.nzlii.org/nz/cases/${court}/${year}`;
+  const base = `http://www.nzlii.org/nz/cases/${court}/${year}`;
   const outputDir = path.join("output", court, year);
   await fs.mkdir(outputDir, { recursive: true });
   console.log(`Fetching index: ${base}/`);

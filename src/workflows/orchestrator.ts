@@ -1,6 +1,6 @@
 import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from "cloudflare:workers";
 
-import { isYearDone } from "../lib/kv.ts";
+import { getDoneYears } from "../lib/kv.ts";
 import type { Env } from "../types.ts";
 
 const SCRAPE_FROM_YEAR = 2000;
@@ -19,16 +19,15 @@ export class OrchestratorWorkflow extends WorkflowEntrypoint<Env> {
 
     const currentYear = new Date().getFullYear();
 
-    // One step per court — iterate all years inside to keep step count low
+    // One step per court — one KV list replaces N individual reads
     for (const court of courts) {
       await step.do(`spawn-${court}`, async () => {
+        const doneYears = await getDoneYears(this.env.KV, court);
         for (let year = currentYear; year >= SCRAPE_FROM_YEAR; year--) {
           // Skip completed historical years (current year is never skipped)
-          const skip = year < currentYear && (await isYearDone(this.env.KV, court, year));
-          if (!skip) {
-            const id = `${court}-${year}-${new Date().toISOString().slice(0, 10)}`;
-            await this.env.COURT_SCRAPE.create({ id, params: { court, year } });
-          }
+          if (year < currentYear && doneYears.has(year)) continue;
+          const id = `${court}-${year}-${new Date().toISOString().slice(0, 10)}`;
+          await this.env.COURT_SCRAPE.create({ id, params: { court, year } });
         }
       });
     }

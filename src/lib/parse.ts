@@ -44,7 +44,7 @@ export const resolveUrl = (href: string, base: string): string =>
   href.startsWith("http")
     ? href
     : href.startsWith("/")
-      ? `https://www.nzlii.org${href}`
+      ? `http://www.nzlii.org${href}`
       : `${base}/${href}`;
 
 /**
