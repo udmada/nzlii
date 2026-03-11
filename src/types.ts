@@ -1,4 +1,3 @@
-import { Schema } from "effect";
 import type {
   D1Database,
   DurableObjectNamespace,
@@ -6,6 +5,7 @@ import type {
   Queue,
   R2Bucket,
 } from "@cloudflare/workers-types";
+import { Schema } from "effect";
 
 // ---------------------------------------------------------------------------
 // Domain schemas + types

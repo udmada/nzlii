@@ -1,4 +1,5 @@
 import type { R2Bucket } from "@cloudflare/workers-types";
+
 import type { R2Key } from "../types.ts";
 
 export const headObject = async (r2: R2Bucket, key: R2Key): Promise<boolean> =>

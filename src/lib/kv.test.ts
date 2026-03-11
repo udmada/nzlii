@@ -1,5 +1,6 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+
 import { getCourts, saveCourts, isYearDone, markYearDone } from "./kv.ts";
 
 const makeKV = (store: Record<string, string> = {}) => ({

@@ -5,12 +5,13 @@ import type {
   ScheduledController,
 } from "@cloudflare/workers-types";
 import { Effect, Schema } from "effect";
+
+import { markDone, markError, queryCases } from "./lib/d1.ts";
+import { getCourts, saveCourts } from "./lib/kv.ts";
+import { detectPdf, resolveUrl, extractText, parseCourts } from "./lib/parse.ts";
+import { headObject, putText, putBinary, makeR2Key } from "./lib/r2.ts";
 import type { Env, QueueMessage, ScraperError } from "./types.ts";
 import { fetchError, storageError, toErrorMessage, QueueMessageSchema } from "./types.ts";
-import { detectPdf, resolveUrl, extractText } from "./lib/parse.ts";
-import { getCourts } from "./lib/kv.ts";
-import { headObject, putText, putBinary, makeR2Key } from "./lib/r2.ts";
-import { markDone, markError, queryCases } from "./lib/d1.ts";
 
 // Re-export Workflow and DO classes so wrangler can bind them
 export { OrchestratorWorkflow } from "./workflows/orchestrator.ts";
@@ -24,9 +25,11 @@ export { RateLimiterDO } from "./objects/rate-limiter.ts";
 const HEADERS = {
   "User-Agent":
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15",
-  Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
   "Accept-Language": "en-NZ,en;q=0.9",
 } as const;
+
+const DATABASES_URL = "https://www.nzlii.org/databases.html";
 
 const isQueueMessage = Schema.is(QueueMessageSchema);
 
@@ -183,9 +186,16 @@ const handleFetch = async (request: Request, env: Env): Promise<Response> => {
   const url = new URL(request.url);
   const { pathname } = url;
 
-  // GET /courts
+  // GET /courts — serve from KV cache, refreshing from nzlii.org if stale/empty
   if (request.method === "GET" && pathname === "/courts") {
-    const courts = await getCourts(env.KV);
+    let courts = await getCourts(env.KV);
+    if (!courts) {
+      const res = await fetch(DATABASES_URL, { headers: HEADERS });
+      if (res.ok) {
+        courts = parseCourts(await res.text());
+        await saveCourts(env.KV, courts);
+      }
+    }
     return Response.json(courts ?? []);
   }
 

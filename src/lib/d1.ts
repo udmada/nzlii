@@ -1,7 +1,7 @@
 import type { D1Database } from "@cloudflare/workers-types";
 import { Effect } from "effect";
-import type { R2Key, ScraperError } from "../types.ts";
-import { storageError } from "../types.ts";
+
+import { type R2Key, type ScraperError, storageError } from "../types.ts";
 
 export type CaseStatus = "pending" | "done" | "error";
 
