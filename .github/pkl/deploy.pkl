@@ -1,0 +1,50 @@
+amends "@com.github.actions/Workflow.pkl"
+import "@com.github.actions/Step.pkl"
+
+import "common.pkl"
+
+name = "Deploy to Cloudflare"
+
+on {
+  push {
+    branches { "master" }
+    paths {
+      "src/**"
+      "wrangler.toml"
+      "schema.sql"
+      "package.json"
+      "pnpm-lock.yaml"
+      "mise.toml"
+    }
+  }
+}
+
+env {
+  ["CLOUDFLARE_API_TOKEN"] = "${{ secrets.CLOUDFLARE_API_TOKEN }}"
+  ["CLOUDFLARE_ACCOUNT_ID"] = "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"
+}
+
+jobs {
+  ["deploy"] {
+    `runs-on` = "ubuntu-slim"
+    environment = new { name = "production" }
+    steps = (common.steps) {
+      (Step) {
+        name = "Type check"
+        run = "mise run typecheck"
+      }
+      (Step) {
+        name = "Test"
+        run = "mise run test"
+      }
+      (Step) {
+        name = "Apply D1 schema"
+        run = "mise run db:migrate"
+      }
+      (Step) {
+        name = "Deploy to Cloudflare"
+        run = "mise run deploy"
+      }
+    }
+  }
+}
