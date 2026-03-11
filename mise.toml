@@ -14,15 +14,15 @@ run = "pnpm oxlint --tsconfig=tsconfig.json --type-aware ."
 
 [tasks.typecheck]
 description = "Type-check with tsc"
-run = "pnpm tsc --noEmit && (ls src/*.ts src/**/*.ts 2>/dev/null | grep -q . && pnpm tsc --noEmit --project src/tsconfig.json || true)"
+run = "pnpm exec oxlint --type-aware --type-check"
 
 [tasks.fmt]
 description = "Format with oxfmt"
-run = "pnpm oxfmt ."
+run = "pnpm oxfmt"
 
 [tasks."fmt:check"]
 description = "Check formatting (CI)"
-run = "pnpm oxfmt --check ."
+run = "pnpm oxfmt --check"
 
 [tasks.test]
 description = "Run unit tests"
