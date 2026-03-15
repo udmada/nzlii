@@ -41,14 +41,6 @@ const DATABASES_URL = "http://www.nzlii.org/databases.html";
 const isQueueMessage = Schema.is(QueueMessageSchema);
 
 // ---------------------------------------------------------------------------
-// RateLimiter DO stub interface
-// ---------------------------------------------------------------------------
-
-interface RateLimiterStub {
-  waitForSlot(): Promise<void>;
-}
-
-// ---------------------------------------------------------------------------
 // processCase — core scrape logic for a single queue message
 // ---------------------------------------------------------------------------
 
@@ -150,12 +142,17 @@ const scheduled = async (
   ctx.waitUntil(env.ORCHESTRATOR.create({}));
 };
 
+const RETRY_DELAY_SECONDS = 60;
+
 const queue = async (batch: MessageBatch, env: Env): Promise<void> => {
-  const stub = env.RATE_LIMITER.get(
-    env.RATE_LIMITER.idFromName("global"),
-  ) as unknown as RateLimiterStub;
+  const stub = env.RATE_LIMITER.get(env.RATE_LIMITER.idFromName("global"));
   for (const msg of batch.messages) {
-    await stub.waitForSlot();
+    const slotRes = await stub.fetch("http://rate-limiter/slot");
+    if (!slotRes.ok) {
+      // Rate limiter is backed up — retry this and all remaining messages later
+      batch.retryAll({ delaySeconds: RETRY_DELAY_SECONDS });
+      return;
+    }
     if (!isQueueMessage(msg.body)) {
       console.error("Invalid queue message shape:", msg.body);
       msg.ack();
