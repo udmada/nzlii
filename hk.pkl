@@ -17,7 +17,7 @@ hooks {
       }
       ["pkl-gen"] {
         glob = ".github/pkl/**/*.*"
-        fix = "mise run pkl:gen && git add .github/"
+        fix = "mise run pkl:gen && mise run fmt && git add .github/"
       }
     }
   }
