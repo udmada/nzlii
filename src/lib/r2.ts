@@ -1,6 +1,6 @@
 import type { R2Bucket } from "@cloudflare/workers-types";
 
-import type { R2Key } from "../types.ts";
+import { R2KeySchema, type R2Key } from "../types.ts";
 
 export const headObject = async (r2: R2Bucket, key: R2Key): Promise<boolean> =>
   (await r2.head(key)) !== null;
@@ -26,4 +26,4 @@ export const makeR2Key = (
   num: string,
   title: string,
   ext: "txt" | "pdf",
-): R2Key => `${court}/${year}/${num} - ${title}.${ext}` as R2Key;
+): R2Key => R2KeySchema.make(`${court}/${year}/${num} - ${title}.${ext}`);
