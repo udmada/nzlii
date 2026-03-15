@@ -13,7 +13,7 @@ jobs {
     steps = (common.steps) {
       (Step) {
         name = "Verify pkl gen is up to date"
-        run = "mise run pkl:gen && git diff --exit-code .github/"
+        run = "mise run pkl:gen && mise run fmt && git diff --exit-code .github/"
       }
       (Step) {
         name = "Type check"

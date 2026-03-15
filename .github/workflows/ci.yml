@@ -14,7 +14,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Verify pkl gen is up to date
-        run: mise run pkl:gen && git diff --exit-code .github/
+        run: mise run pkl:gen && mise run fmt && git diff --exit-code .github/
       - name: Type check
         run: mise run typecheck
       - name: Lint
