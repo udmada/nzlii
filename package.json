@@ -23,7 +23,7 @@
     "oxlint": "^1.53.0",
     "oxlint-tsgolint": "^0.16.0",
     "vitest": "^4.1.0",
-    "wrangler": "^4.72.0"
+    "wrangler": "^4.73.0"
   },
   "packageManager": "pnpm@10.30.3"
 }
