@@ -19,7 +19,7 @@
     "@cloudflare/workers-types": "^4.20260313.1",
     "@types/node": "^25.4.0",
     "@typescript/native-preview": "7.0.0-dev.20260311.1",
-    "oxfmt": "^0.38.0",
+    "oxfmt": "^0.40.0",
     "oxlint": "^1.53.0",
     "oxlint-tsgolint": "^0.16.0",
     "vitest": "^4.1.0",
