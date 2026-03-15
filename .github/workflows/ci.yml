@@ -1,37 +1,37 @@
 # Generated from Workflow.pkl. DO NOT EDIT.
 name: CI
-'on': push
+"on": push
 jobs:
   check:
     runs-on: ubuntu-slim
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-      with:
-        fetch-depth: 1
-    - uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db # v3
-      with:
-        experimental: true
-    - name: Install dependencies
-      run: pnpm install --frozen-lockfile
-    - name: Verify pkl gen is up to date
-      run: mise run pkl:gen && git diff --exit-code .github/
-    - name: Type check
-      run: mise run typecheck
-    - name: Lint
-      run: mise run lint
-    - name: Format check
-      run: mise run fmt:check
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 1
+      - uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db # v3
+        with:
+          experimental: true
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Verify pkl gen is up to date
+        run: mise run pkl:gen && git diff --exit-code .github/
+      - name: Type check
+        run: mise run typecheck
+      - name: Lint
+        run: mise run lint
+      - name: Format check
+        run: mise run fmt:check
   test:
     needs: check
     runs-on: ubuntu-slim
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-      with:
-        fetch-depth: 1
-    - uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db # v3
-      with:
-        experimental: true
-    - name: Install dependencies
-      run: pnpm install --frozen-lockfile
-    - name: Test
-      run: mise run test
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 1
+      - uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db # v3
+        with:
+          experimental: true
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Test
+        run: mise run test
