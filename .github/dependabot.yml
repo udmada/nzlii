@@ -1,15 +1,15 @@
 version: 2
 updates:
-  - package-ecosystem: npm
-    directory: /
-    schedule:
-      interval: weekly
-      timezone: Pacific/Auckland
-  - package-ecosystem: github-actions
-    directory: /
-    ignore:
-      - dependency-name: "*"
-        update-types:
-          - version-update:semver-major
-    schedule:
-      interval: weekly
+- package-ecosystem: npm
+  directory: /
+  schedule:
+    interval: weekly
+    timezone: Pacific/Auckland
+- package-ecosystem: github-actions
+  directory: /
+  ignore:
+  - dependency-name: '*'
+    update-types:
+    - version-update:semver-major
+  schedule:
+    interval: weekly
