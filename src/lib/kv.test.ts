@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { getCourts, saveCourts, isYearDone, markYearDone } from "./kv.ts";
+import { getCourts, saveCourts, isYearDone, markYearDone, getDoneYears } from "./kv.ts";
 
 const makeKV = (store: Record<string, string> = {}) => ({
   store,
@@ -17,7 +17,13 @@ const makeKV = (store: Record<string, string> = {}) => ({
   delete: async (key: string) => {
     delete store[key];
   },
-  list: async () => ({ keys: [] as { name: string }[], list_complete: true, cursor: "" }),
+  list: async ({ prefix }: { prefix?: string } = {}) => ({
+    keys: Object.keys(store)
+      .filter((k) => prefix == null || k.startsWith(prefix))
+      .map((k) => ({ name: k })),
+    list_complete: true,
+    cursor: "",
+  }),
   getWithMetadata: async (key: string) => ({ value: store[key] ?? null, metadata: null }),
 });
 
@@ -79,5 +85,37 @@ void describe("isYearDone / markYearDone", () => {
     await markYearDone(kv as never, "NZSC", 2020);
     assert.equal(await isYearDone(kv as never, "NZCA", 2020), false);
     assert.equal(await isYearDone(kv as never, "NZSC", 2021), false);
+  });
+});
+
+void describe("getDoneYears", () => {
+  void it("returns empty set when no years are done", async () => {
+    const kv = makeKV();
+    const result = await getDoneYears(kv as never, "NZSC");
+    assert.equal(result.size, 0);
+  });
+
+  void it("returns correct years for a court", async () => {
+    const kv = makeKV();
+    await markYearDone(kv as never, "NZSC", 2020);
+    await markYearDone(kv as never, "NZSC", 2021);
+    await markYearDone(kv as never, "NZSC", 2022);
+    const result = await getDoneYears(kv as never, "NZSC");
+    assert.equal(result.size, 3);
+    assert.ok(result.has(2020));
+    assert.ok(result.has(2021));
+    assert.ok(result.has(2022));
+  });
+
+  void it("does not include years from other courts", async () => {
+    const kv = makeKV();
+    await markYearDone(kv as never, "NZSC", 2020);
+    await markYearDone(kv as never, "NZCA", 2020);
+    const nzsc = await getDoneYears(kv as never, "NZSC");
+    assert.equal(nzsc.size, 1);
+    assert.ok(nzsc.has(2020));
+    const nzca = await getDoneYears(kv as never, "NZCA");
+    assert.equal(nzca.size, 1);
+    assert.ok(nzca.has(2020));
   });
 });

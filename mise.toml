@@ -28,6 +28,10 @@ run = "pnpm oxfmt --check"
 description = "Run unit tests"
 run = "node --experimental-strip-types --test scrape.test.ts src/lib/parse.test.ts src/lib/kv.test.ts src/lib/r2.test.ts src/lib/d1.test.ts"
 
+[tasks."test:workers"]
+description = "Run Workers runtime tests with Vitest"
+run = "pnpm vitest run"
+
 [tasks.install]
 description = "Install dependencies (frozen)"
 run = "pnpm install --frozen-lockfile"

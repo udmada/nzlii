@@ -5,6 +5,7 @@
     "suspicious": "warn"
   },
   "plugins": ["import", "typescript"],
+  "ignorePatterns": ["**/*.workers.test.ts"],
   "rules": {
     "import/no-cycle": ["error", { "maxDepth": 3 }],
     "typescript/ban-ts-comment": "off",
@@ -24,5 +25,18 @@
     "typescript/prefer-promise-reject-errors": "warn",
     "typescript/strict-boolean-expressions": "error",
     "typescript/use-unknown-in-catch-callback-variable": "warn"
-  }
+  },
+  "overrides": [
+    {
+      "files": ["**/*.test.ts", "**/*.workers.test.ts"],
+      "rules": {
+        "typescript/explicit-function-return-type": "off",
+        "typescript/no-unsafe-type-assertion": "off",
+        "typescript/no-unsafe-assignment": "off",
+        "typescript/no-unsafe-call": "off",
+        "typescript/no-unsafe-member-access": "off",
+        "typescript/no-unsafe-return": "off"
+      }
+    }
+  ]
 }
