@@ -3,6 +3,7 @@ hk = "latest"
 node = "lts"
 pkl = "latest"
 pnpm = "latest"
+wrangler = "latest"
 
 [tasks.scrape]
 description = "Run the NZLII scraper"
@@ -10,7 +11,7 @@ run = "node --experimental-strip-types scrape.ts"
 
 [tasks.lint]
 description = "Lint with oxlint (type-aware)"
-run = "pnpm oxlint --type-aware --fix"
+run = "pnpm exec oxlint --type-aware --fix"
 
 [tasks.typecheck]
 description = "Type-check with tsc"
@@ -18,11 +19,11 @@ run = "pnpm exec oxlint --type-check --type-aware"
 
 [tasks.fmt]
 description = "Format with oxfmt"
-run = "pnpm oxfmt"
+run = "pnpm exec oxfmt"
 
 [tasks."fmt:check"]
 description = "Check formatting (CI)"
-run = "pnpm oxfmt --check"
+run = "pnpm exec oxfmt --check"
 
 [tasks.test]
 description = "Run unit tests"
@@ -41,13 +42,13 @@ description = "Generate GitHub Actions YAML from pkl sources"
 run = "pkl eval -m .github/ --project-dir .github/pkl .github/pkl/index.pkl"
 
 [tasks.dev]
-run = "wrangler dev"
+run = "pnpm exec wrangler dev"
 
 [tasks.deploy]
-run = "wrangler deploy"
+run = "pnpm exec wrangler deploy"
 
 [tasks."db:migrate"]
-run = "wrangler d1 execute nzill --file=schema.sql"
+run = "pnpm exec wrangler d1 execute nzill --file=schema.sql"
 
 [tasks."db:migrate:local"]
-run = "wrangler d1 execute nzill --local --file=schema.sql"
+run = "pnpm exec wrangler d1 execute nzill --local --file=schema.sql"
