@@ -27,7 +27,12 @@ export class OrchestratorWorkflow extends WorkflowEntrypoint<Env> {
           // Skip completed historical years (current year is never skipped)
           if (year < currentYear && doneYears.has(year)) continue;
           const id = `${court}-${year}-${new Date().toISOString().slice(0, 10)}`;
-          await this.env.COURT_SCRAPE.create({ id, params: { court, year } });
+          try {
+            await this.env.COURT_SCRAPE.create({ id, params: { court, year } });
+          } catch (e: unknown) {
+            // Idempotent: skip if this instance was already created on a prior attempt
+            if (!(e instanceof Error && e.message.includes("already_exists"))) throw e;
+          }
         }
       });
     }
