@@ -26,8 +26,8 @@ description = "Check formatting (CI)"
 run = "pnpm exec oxfmt --check"
 
 [tasks.test]
-description = "Run unit tests"
-run = "node --experimental-strip-types --test scrape.test.ts src/lib/parse.test.ts src/lib/kv.test.ts src/lib/r2.test.ts src/lib/d1.test.ts"
+description = "Run unit tests with ≥80% coverage enforcement"
+run = "node --experimental-strip-types --test --experimental-test-coverage --test-coverage-lines=80 --test-coverage-branches=80 --test-coverage-functions=80 --test-coverage-include='src/**/*.ts' --test-coverage-exclude='src/**/*.test.ts' scrape.test.ts src/lib/parse.test.ts src/lib/kv.test.ts src/lib/r2.test.ts src/lib/d1.test.ts src/types.test.ts"
 
 [tasks."test:workers"]
 description = "Run Workers runtime tests with Vitest"
