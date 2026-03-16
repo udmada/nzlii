@@ -161,8 +161,8 @@ const queue = async (batch: MessageBatch, env: Env): Promise<void> => {
     }
     const body: QueueMessage = msg.body;
 
-    const slotRes = await stub.fetch("http://rate-limiter/slot");
-    if (!slotRes.ok) {
+    const allowed = await stub.acquireSlot();
+    if (!allowed) {
       // Rate limiter backed up. Re-send this and remaining messages as fresh
       // queue entries with a delay, then ack the originals. Using retryAll()
       // here would burn the retry budget (max_retries) meant for real errors.
