@@ -75,3 +75,35 @@ export const queryCases = (
         .all(),
     catch: (e) => storageError(e instanceof Error ? e.message : String(e)),
   }).pipe(Effect.map((r) => r.results));
+
+export type PendingCase = {
+  readonly court: string;
+  readonly year: number;
+  readonly num: string;
+  readonly title: string;
+  readonly url: string;
+};
+
+const isPendingCase = (v: unknown): v is PendingCase =>
+  typeof v === "object" &&
+  v !== null &&
+  typeof (v as Record<string, unknown>)["court"] === "string" &&
+  typeof (v as Record<string, unknown>)["year"] === "number" &&
+  typeof (v as Record<string, unknown>)["num"] === "string" &&
+  typeof (v as Record<string, unknown>)["title"] === "string" &&
+  typeof (v as Record<string, unknown>)["url"] === "string";
+
+export const queryPendingCases = (
+  db: D1Database,
+  statuses: readonly CaseStatus[],
+): Effect.Effect<readonly PendingCase[], ScraperError> =>
+  Effect.tryPromise({
+    try: () =>
+      db
+        .prepare(
+          `SELECT court, year, num, title, url FROM cases WHERE status IN (${statuses.map(() => "?").join(",")})`,
+        )
+        .bind(...statuses)
+        .all(),
+    catch: (e) => storageError(e instanceof Error ? e.message : String(e)),
+  }).pipe(Effect.map((r) => r.results.filter(isPendingCase)));

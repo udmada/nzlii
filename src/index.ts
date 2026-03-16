@@ -2,11 +2,12 @@ import type {
   ExecutionContext,
   ExportedHandler,
   MessageBatch,
+  MessageSendRequest,
   ScheduledController,
 } from "@cloudflare/workers-types";
 import { Effect, Schema } from "effect";
 
-import { markDone, markError, queryCases } from "./lib/d1.ts";
+import { markDone, markError, queryCases, queryPendingCases } from "./lib/d1.ts";
 import { getCourts, saveCourts } from "./lib/kv.ts";
 import { detectPdf, resolveUrl, extractText, parseCourts } from "./lib/parse.ts";
 import { headObject, putText, putBinary, makeR2Key } from "./lib/r2.ts";
@@ -148,19 +149,39 @@ const RETRY_DELAY_SECONDS = 60;
 
 const queue = async (batch: MessageBatch, env: Env): Promise<void> => {
   const stub = env.RATE_LIMITER.get(env.RATE_LIMITER.idFromName("global"));
-  for (const msg of batch.messages) {
-    const slotRes = await stub.fetch("http://rate-limiter/slot");
-    if (!slotRes.ok) {
-      // Rate limiter is backed up — retry this and all remaining messages later
-      batch.retryAll({ delaySeconds: RETRY_DELAY_SECONDS });
-      return;
-    }
+
+  for (let i = 0; i < batch.messages.length; i++) {
+    const msg = batch.messages[i];
+    if (msg === undefined) continue;
+
     if (!isQueueMessage(msg.body)) {
       console.error("Invalid queue message shape:", msg.body);
       msg.ack();
       continue;
     }
     const body: QueueMessage = msg.body;
+
+    const slotRes = await stub.fetch("http://rate-limiter/slot");
+    if (!slotRes.ok) {
+      // Rate limiter backed up. Re-send this and remaining messages as fresh
+      // queue entries with a delay, then ack the originals. Using retryAll()
+      // here would burn the retry budget (max_retries) meant for real errors.
+      const toResend: MessageSendRequest<QueueMessage>[] = [
+        { body, delaySeconds: RETRY_DELAY_SECONDS },
+      ];
+      msg.ack();
+      for (let j = i + 1; j < batch.messages.length; j++) {
+        const rem = batch.messages[j];
+        if (rem === undefined) continue;
+        if (isQueueMessage(rem.body)) {
+          toResend.push({ body: rem.body, delaySeconds: RETRY_DELAY_SECONDS });
+        }
+        rem.ack();
+      }
+      await env.SCRAPE_QUEUE.sendBatch(toResend);
+      return;
+    }
+
     const result = await Effect.runPromise(Effect.either(processCase(env, body)));
     if (result._tag === "Left") {
       console.error(`ERROR ${body.court}/${body.year}/${body.num}:`, result.left);
@@ -195,7 +216,11 @@ const isCaseRow = (v: unknown): v is CaseRow =>
 // HTTP fetch handler
 // ---------------------------------------------------------------------------
 
-const handleFetch = async (request: Request, env: Env): Promise<Response> => {
+const handleFetch = async (
+  request: Request,
+  env: Env,
+  ctx: ExecutionContext,
+): Promise<Response> => {
   const url = new URL(request.url);
   const { pathname } = url;
 
@@ -262,6 +287,35 @@ const handleFetch = async (request: Request, env: Env): Promise<Response> => {
   if (request.method === "POST" && pathname === "/scrape") {
     await env.ORCHESTRATOR.create({});
     return new Response(null, { status: 202 });
+  }
+
+  // POST /requeue-pending?include_errors=1
+  // Re-enqueues all pending (and optionally error) cases from D1 as fresh queue messages.
+  if (request.method === "POST" && pathname === "/requeue-pending") {
+    const includeErrors = url.searchParams.get("include_errors") === "1";
+    const statuses = includeErrors ? (["pending", "error"] as const) : (["pending"] as const);
+    const result = await Effect.runPromise(Effect.either(queryPendingCases(env.DB, statuses)));
+    if (result._tag === "Left") {
+      return new Response("DB error", { status: 500 });
+    }
+    const cases = result.right;
+    ctx.waitUntil(
+      (async (): Promise<void> => {
+        for (let i = 0; i < cases.length; i += 100) {
+          const batch = cases.slice(i, i + 100).map((c) => ({
+            body: {
+              court: c.court,
+              year: c.year,
+              num: c.num,
+              title: c.title,
+              url: c.url,
+            } satisfies QueueMessage,
+          }));
+          await env.SCRAPE_QUEUE.sendBatch(batch);
+        }
+      })(),
+    );
+    return Response.json({ enqueued: cases.length });
   }
 
   return new Response("Not found", { status: 404 });
