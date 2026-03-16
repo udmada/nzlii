@@ -169,16 +169,19 @@ const queue = async (batch: MessageBatch, env: Env): Promise<void> => {
       const toResend: MessageSendRequest<QueueMessage>[] = [
         { body, delaySeconds: RETRY_DELAY_SECONDS },
       ];
-      msg.ack();
+      const toAck: Array<{ ack(): void }> = [msg];
       for (let j = i + 1; j < batch.messages.length; j++) {
         const rem = batch.messages[j];
         if (rem === undefined) continue;
         if (isQueueMessage(rem.body)) {
           toResend.push({ body: rem.body, delaySeconds: RETRY_DELAY_SECONDS });
         }
-        rem.ack();
+        toAck.push(rem);
       }
+      // sendBatch first: if it throws (e.g. 429), originals are not yet acked
+      // and Cloudflare will retry the whole batch naturally.
       await env.SCRAPE_QUEUE.sendBatch(toResend);
+      for (const m of toAck) m.ack();
       return;
     }
 
