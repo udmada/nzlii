@@ -37,6 +37,7 @@ const HEADERS = {
 } as const;
 
 const DATABASES_URL = "http://www.nzlii.org/databases.html";
+const FETCH_TIMEOUT_MS = 20_000;
 
 const isQueueMessage = Schema.is(QueueMessageSchema);
 
@@ -66,7 +67,7 @@ const processCase = (env: Env, msg: QueueMessage): Effect.Effect<string, Scraper
 
     // Fetch the case page
     const fetchPage = Effect.tryPromise({
-      try: () => fetch(url, { headers: HEADERS }),
+      try: () => fetch(url, { headers: HEADERS, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) }),
       catch: (e) => storageError(toErrorMessage(e)),
     });
 
@@ -88,7 +89,8 @@ const processCase = (env: Env, msg: QueueMessage): Effect.Effect<string, Scraper
           const pdfUrl = resolveUrl(pdfHref, url);
 
           const fetchPdf = Effect.tryPromise({
-            try: () => fetch(pdfUrl, { headers: HEADERS }),
+            try: () =>
+              fetch(pdfUrl, { headers: HEADERS, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) }),
             catch: (e) => storageError(toErrorMessage(e)),
           });
 
@@ -162,10 +164,17 @@ const queue = async (batch: MessageBatch, env: Env): Promise<void> => {
     const result = await Effect.runPromise(Effect.either(processCase(env, body)));
     if (result._tag === "Left") {
       console.error(`ERROR ${body.court}/${body.year}/${body.num}:`, result.left);
+      // Retry on transient server/network errors (5xx, timeouts); ack permanent ones (4xx)
+      const isTransient = result.left._tag === "FetchError" && result.left.status >= 500;
+      if (isTransient) {
+        msg.retry();
+      } else {
+        msg.ack();
+      }
     } else {
       console.log(result.right);
+      msg.ack();
     }
-    msg.ack();
   }
 };
 
