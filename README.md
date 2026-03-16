@@ -98,22 +98,22 @@ sequenceDiagram
 
 ### Storage layout
 
-| Store | Key pattern | Contents |
-|-------|------------|----------|
-| **R2** | `COURT/YEAR/N - Title.txt` | Extracted decision text (HTML decisions) |
-| **R2** | `COURT/YEAR/N - Title.pdf` | Raw PDF binary (PDF-embedded decisions) |
-| **D1** | `cases` table | `(court, year, num, title, url, status, r2_key, error, scraped_at)` |
-| **KV** | `courts` | Cached JSON list of all 135 NZ courts (7-day TTL) |
-| **KV** | `done:COURT:YEAR` | Sentinel — historical year fully scraped, skip on next run |
+| Store  | Key pattern                | Contents                                                            |
+| ------ | -------------------------- | ------------------------------------------------------------------- |
+| **R2** | `COURT/YEAR/N - Title.txt` | Extracted decision text (HTML decisions)                            |
+| **R2** | `COURT/YEAR/N - Title.pdf` | Raw PDF binary (PDF-embedded decisions)                             |
+| **D1** | `cases` table              | `(court, year, num, title, url, status, r2_key, error, scraped_at)` |
+| **KV** | `courts`                   | Cached JSON list of all 135 NZ courts (7-day TTL)                   |
+| **KV** | `done:COURT:YEAR`          | Sentinel — historical year fully scraped, skip on next run          |
 
 ## HTTP API
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/courts` | List all NZ courts (KV-cached, refreshed from nzlii.org) |
-| `GET` | `/decisions?court=NZSC&year=2024` | List decisions for a court-year from D1 |
-| `GET` | `/decisions/:court/:year/:num` | Stream the stored decision (text or PDF) from R2 |
-| `POST` | `/scrape` | Manually trigger the orchestrator |
+| Method | Path                              | Description                                              |
+| ------ | --------------------------------- | -------------------------------------------------------- |
+| `GET`  | `/courts`                         | List all NZ courts (KV-cached, refreshed from nzlii.org) |
+| `GET`  | `/decisions?court=NZSC&year=2024` | List decisions for a court-year from D1                  |
+| `GET`  | `/decisions/:court/:year/:num`    | Stream the stored decision (text or PDF) from R2         |
+| `POST` | `/scrape`                         | Manually trigger the orchestrator                        |
 
 ## Project structure
 
@@ -197,17 +197,17 @@ GitHub Actions workflows are generated from PKL sources in `.github/pkl/`. **Edi
 mise run pkl:gen          # regenerate .github/workflows/*.yml
 ```
 
-| Workflow | Trigger | Steps |
-|----------|---------|-------|
-| **CI** | every push | pkl:gen check · typecheck · lint · fmt:check · test |
+| Workflow   | Trigger                                 | Steps                                                  |
+| ---------- | --------------------------------------- | ------------------------------------------------------ |
+| **CI**     | every push                              | pkl:gen check · typecheck · lint · fmt:check · test    |
 | **Deploy** | push to `master` (src/wrangler changes) | typecheck · lint · test · db:migrate · wrangler deploy |
 
 ### Secrets required
 
-| Secret | Description |
-|--------|-------------|
-| `CLOUDFLARE_API_TOKEN` | Wrangler deploy token (Edit Workers permission) |
-| `CLOUDFLARE_ACCOUNT_ID` | Your Cloudflare account ID |
+| Secret                  | Description                                     |
+| ----------------------- | ----------------------------------------------- |
+| `CLOUDFLARE_API_TOKEN`  | Wrangler deploy token (Edit Workers permission) |
+| `CLOUDFLARE_ACCOUNT_ID` | Your Cloudflare account ID                      |
 
 ## Configuration
 
