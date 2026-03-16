@@ -6,6 +6,8 @@ import { markYearDone } from "../lib/kv.ts";
 import { parseCaseLinks } from "../lib/parse.ts";
 import type { Env, QueueMessage } from "../types.ts";
 
+const FETCH_TIMEOUT_MS = 20_000;
+
 const HEADERS = {
   "User-Agent":
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15",
@@ -21,7 +23,9 @@ export class CourtScrapeWorkflow extends WorkflowEntrypoint<Env, CourtScrapePara
     const base = `http://www.nzlii.org/nz/cases/${court}/${year}`;
 
     const cases = await step.do("fetch-index", async () => {
-      const res = await fetch(`${base}/`, { headers: HEADERS });
+      const signal = AbortSignal.timeout(FETCH_TIMEOUT_MS);
+      const res = await fetch(`${base}/`, { headers: HEADERS, signal });
+      if (res.status === 404) return [];
       if (!res.ok) throw new Error(`HTTP ${res.status} fetching index for ${court}/${year}`);
       return parseCaseLinks(await res.text(), base);
     });
