@@ -87,11 +87,16 @@ export type PendingCase = {
 const isPendingCase = (v: unknown): v is PendingCase =>
   typeof v === "object" &&
   v !== null &&
-  typeof (v as Record<string, unknown>)["court"] === "string" &&
-  typeof (v as Record<string, unknown>)["year"] === "number" &&
-  typeof (v as Record<string, unknown>)["num"] === "string" &&
-  typeof (v as Record<string, unknown>)["title"] === "string" &&
-  typeof (v as Record<string, unknown>)["url"] === "string";
+  "court" in v &&
+  "year" in v &&
+  "num" in v &&
+  "title" in v &&
+  "url" in v &&
+  typeof v.court === "string" &&
+  typeof v.year === "number" &&
+  typeof v.num === "string" &&
+  typeof v.title === "string" &&
+  typeof v.url === "string";
 
 export const queryPendingCases = (
   db: D1Database,
