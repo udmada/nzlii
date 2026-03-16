@@ -7,6 +7,8 @@ import type {
 } from "@cloudflare/workers-types";
 import { Schema } from "effect";
 
+import type { RateLimiterDO } from "./objects/rate-limiter.ts";
+
 // ---------------------------------------------------------------------------
 // Domain schemas + types
 // ---------------------------------------------------------------------------
@@ -98,7 +100,7 @@ export const toScraperError = (e: unknown): ScraperError =>
 export interface Env {
   readonly ORCHESTRATOR: Workflow;
   readonly COURT_SCRAPE: Workflow;
-  readonly RATE_LIMITER: DurableObjectNamespace;
+  readonly RATE_LIMITER: DurableObjectNamespace<RateLimiterDO>;
   readonly SCRAPE_QUEUE: Queue<QueueMessage>;
   readonly KV: KVNamespace;
   readonly R2: R2Bucket;
