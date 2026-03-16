@@ -37,6 +37,20 @@ describe("GET /decisions/:court/:year/:num", () => {
   });
 });
 
+describe("POST /requeue-pending", () => {
+  it("returns non-404 for POST (route is recognised)", async () => {
+    const res = await SELF.fetch("http://example.com/requeue-pending", { method: "POST" });
+    // D1 has no schema in test env → likely 500; production → 200 JSON.
+    // Either way the route must be matched (not 404).
+    expect(res.status).not.toBe(404);
+  });
+
+  it("returns 404 for GET (no GET handler)", async () => {
+    const res = await SELF.fetch("http://example.com/requeue-pending");
+    expect(res.status).toBe(404);
+  });
+});
+
 describe("unknown routes", () => {
   it("returns 404", async () => {
     const res = await SELF.fetch("http://example.com/unknown");
