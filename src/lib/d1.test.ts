@@ -3,7 +3,14 @@ import { describe, it } from "node:test";
 
 import { Effect } from "effect";
 
-import { upsertCase, markDone, markError, queryCases, queryPendingCases } from "./d1.ts";
+import {
+  upsertCase,
+  upsertCaseBatch,
+  markDone,
+  markError,
+  queryCases,
+  queryPendingCases,
+} from "./d1.ts";
 
 type Row = {
   court: string;
@@ -74,6 +81,10 @@ const makeD1 = (rows: Row[] = []) => {
   return {
     rows,
     prepare: (sql: string) => ({ bind: (...b: unknown[]) => makeStmt(sql, b) }),
+    batch: async (stmts: Array<{ run(): Promise<unknown> }>) => {
+      for (const stmt of stmts) await stmt.run();
+      return [];
+    },
   };
 };
 
@@ -88,6 +99,9 @@ const makeFailingD1 = () => ({
       },
     }),
   }),
+  batch: async (_stmts: unknown[]) => {
+    throw new Error("DB failure");
+  },
 });
 
 void describe("upsertCase", () => {
@@ -109,6 +123,35 @@ void describe("upsertCase", () => {
       upsertCase(db as never, "NZSC", 2026, "1", "Smith v Jones", "http://example.com/1.html"),
     );
     assert.equal(db.rows.length, 1);
+  });
+});
+
+void describe("upsertCaseBatch", () => {
+  void it("inserts multiple cases in a single batch", async () => {
+    const db = makeD1();
+    await Effect.runPromise(
+      upsertCaseBatch(db as never, "NZHC", 2025, [
+        { num: "1", title: "A v B", url: "http://example.com/1.html" },
+        { num: "2", title: "C v D", url: "http://example.com/2.html" },
+        { num: "3", title: "E v F", url: "http://example.com/3.html" },
+      ]),
+    );
+    assert.equal(db.rows.length, 3);
+    assert.ok(db.rows.every((r) => r.status === "pending" && r.court === "NZHC"));
+  });
+
+  void it("does not duplicate on repeated batch", async () => {
+    const db = makeD1();
+    const cases = [{ num: "1", title: "A v B", url: "http://example.com/1.html" }];
+    await Effect.runPromise(upsertCaseBatch(db as never, "NZHC", 2025, cases));
+    await Effect.runPromise(upsertCaseBatch(db as never, "NZHC", 2025, cases));
+    assert.equal(db.rows.length, 1);
+  });
+
+  void it("handles empty case list without error", async () => {
+    const db = makeD1();
+    await Effect.runPromise(upsertCaseBatch(db as never, "NZHC", 2025, []));
+    assert.equal(db.rows.length, 0);
   });
 });
 
@@ -252,6 +295,17 @@ void describe("queryPendingCases", () => {
 });
 
 void describe("error paths", () => {
+  void it("upsertCaseBatch propagates StorageError on DB failure", async () => {
+    const db = makeFailingD1();
+    const result = await Effect.runPromise(
+      Effect.either(
+        upsertCaseBatch(db as never, "NZHC", 2025, [{ num: "1", title: "A", url: "http://x.com" }]),
+      ),
+    );
+    assert.equal(result._tag, "Left");
+    assert.equal(result.left._tag, "StorageError");
+  });
+
   void it("upsertCase propagates StorageError on DB failure", async () => {
     const db = makeFailingD1();
     const result = await Effect.runPromise(

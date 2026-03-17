@@ -60,6 +60,27 @@ export const markError = (
     catch: (e) => storageError(e instanceof Error ? e.message : String(e)),
   }).pipe(Effect.map(() => undefined));
 
+export const upsertCaseBatch = (
+  db: D1Database,
+  court: string,
+  year: number,
+  cases: readonly { readonly num: string; readonly title: string; readonly url: string }[],
+): Effect.Effect<void, ScraperError> =>
+  Effect.tryPromise({
+    try: async () => {
+      const sql =
+        "INSERT INTO cases (court, year, num, title, url) VALUES (?, ?, ?, ?, ?) ON CONFLICT DO NOTHING";
+      for (let i = 0; i < cases.length; i += 100) {
+        await db.batch(
+          cases
+            .slice(i, i + 100)
+            .map((c) => db.prepare(sql).bind(court, year, c.num, c.title, c.url)),
+        );
+      }
+    },
+    catch: (e) => storageError(e instanceof Error ? e.message : String(e)),
+  }).pipe(Effect.map(() => undefined));
+
 export const queryCases = (
   db: D1Database,
   court: string,
