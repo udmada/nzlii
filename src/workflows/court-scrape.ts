@@ -1,7 +1,7 @@
 import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from "cloudflare:workers";
 import { Effect } from "effect";
 
-import { upsertCase } from "../lib/d1.ts";
+import { upsertCaseBatch } from "../lib/d1.ts";
 import { markYearDone } from "../lib/kv.ts";
 import { parseCaseLinks } from "../lib/parse.ts";
 import type { Env, QueueMessage } from "../types.ts";
@@ -33,11 +33,7 @@ export class CourtScrapeWorkflow extends WorkflowEntrypoint<Env, CourtScrapePara
     if (cases.length === 0) return;
 
     await step.do("upsert-cases", () =>
-      Effect.runPromise(
-        Effect.forEach(cases, (c) => upsertCase(this.env.DB, court, year, c.num, c.title, c.url), {
-          concurrency: 1,
-        }),
-      ),
+      Effect.runPromise(upsertCaseBatch(this.env.DB, court, year, cases)),
     );
 
     await step.do("enqueue", async () => {
