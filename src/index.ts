@@ -2,7 +2,6 @@ import type {
   ExecutionContext,
   ExportedHandler,
   MessageBatch,
-  MessageSendRequest,
   ScheduledController,
 } from "@cloudflare/workers-types";
 import { Effect, Schema } from "effect";
@@ -163,25 +162,13 @@ const queue = async (batch: MessageBatch, env: Env): Promise<void> => {
 
     const allowed = await stub.acquireSlot();
     if (!allowed) {
-      // Rate limiter backed up. Re-send this and remaining messages as fresh
-      // queue entries with a delay, then ack the originals. Using retryAll()
-      // here would burn the retry budget (max_retries) meant for real errors.
-      const toResend: MessageSendRequest<QueueMessage>[] = [
-        { body, delaySeconds: RETRY_DELAY_SECONDS },
-      ];
-      const toAck: Array<{ ack(): void }> = [msg];
+      // Rate limiter backed up. Retry this and all remaining messages with a
+      // delay using the native retry mechanism — no Queue API call, so it
+      // cannot itself be rate-limited (unlike sendBatch).
+      msg.retry({ delaySeconds: RETRY_DELAY_SECONDS });
       for (let j = i + 1; j < batch.messages.length; j++) {
-        const rem = batch.messages[j];
-        if (rem === undefined) continue;
-        if (isQueueMessage(rem.body)) {
-          toResend.push({ body: rem.body, delaySeconds: RETRY_DELAY_SECONDS });
-        }
-        toAck.push(rem);
+        batch.messages[j]?.retry({ delaySeconds: RETRY_DELAY_SECONDS });
       }
-      // sendBatch first: if it throws (e.g. 429), originals are not yet acked
-      // and Cloudflare will retry the whole batch naturally.
-      await env.SCRAPE_QUEUE.sendBatch(toResend);
-      for (const m of toAck) m.ack();
       return;
     }
 
