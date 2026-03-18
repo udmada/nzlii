@@ -178,7 +178,7 @@ const queue = async (batch: MessageBatch, env: Env): Promise<void> => {
       // Retry on transient server/network errors (5xx, timeouts); ack permanent ones (4xx)
       const isTransient = result.left._tag === "FetchError" && result.left.status >= 500;
       if (isTransient) {
-        msg.retry();
+        msg.retry({ delaySeconds: RETRY_DELAY_SECONDS });
       } else {
         msg.ack();
       }
