@@ -273,9 +273,11 @@ const handleFetch = async (
     });
   }
 
-  // POST /scrape
+  // POST /scrape?force=1  — pass a timestamp runId to bypass already_exists on same-day re-runs
   if (request.method === "POST" && pathname === "/scrape") {
-    await env.ORCHESTRATOR.create({});
+    const force = url.searchParams.get("force") === "1";
+    const params = force ? { runId: Date.now().toString() } : {};
+    await env.ORCHESTRATOR.create({ params });
     return new Response(null, { status: 202 });
   }
 
