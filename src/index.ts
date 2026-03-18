@@ -49,19 +49,25 @@ const processCase = (env: Env, msg: QueueMessage): Effect.Effect<string, Scraper
   const { court, year, num, title, url } = msg;
   const txtKey = makeR2Key(court, year, num, title, "txt");
   const pdfKey = makeR2Key(court, year, num, title, "pdf");
+  const rtfKey = makeR2Key(court, year, num, title, "rtf");
   const label = `${court}/${year}/${num}`;
 
-  // R2 HEAD check — skip if either variant already stored
+  // R2 HEAD check — skip if any variant already stored
   const checkExists = Effect.tryPromise({
-    try: () => Promise.all([headObject(env.R2, txtKey), headObject(env.R2, pdfKey)]),
+    try: () =>
+      Promise.all([
+        headObject(env.R2, txtKey),
+        headObject(env.R2, pdfKey),
+        headObject(env.R2, rtfKey),
+      ]),
     catch: (e) => storageError(toErrorMessage(e)),
   });
 
   const errorMsg = (e: ScraperError): string =>
     e._tag === "FetchError" ? `HTTP ${e.status} for ${e.url}` : e.message;
 
-  return Effect.flatMap(checkExists, ([txtExists, pdfExists]) => {
-    if (txtExists || pdfExists) {
+  return Effect.flatMap(checkExists, ([txtExists, pdfExists, rtfExists]) => {
+    if (txtExists || pdfExists || rtfExists) {
       return Effect.succeed(`SKIP ${label} (already in R2)`);
     }
 
@@ -112,6 +118,39 @@ const processCase = (env: Env, msg: QueueMessage): Effect.Effect<string, Scraper
                 }),
                 () =>
                   Effect.map(markDone(env.DB, court, year, num, pdfKey), () => `DONE ${label}.pdf`),
+              ),
+            );
+          });
+        }
+
+        // Empty HTML body — server has no HTML for this case, try RTF fallback
+        if (html.length === 0) {
+          const rtfUrl = url.replace(/\.html$/i, ".rtf");
+
+          const fetchRtf = Effect.tryPromise({
+            try: () =>
+              fetch(rtfUrl, { headers: HEADERS, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) }),
+            catch: (e) => storageError(toErrorMessage(e)),
+          });
+
+          return Effect.flatMap(fetchRtf, (rtfRes) => {
+            if (!rtfRes.ok) {
+              return Effect.fail(fetchError(rtfRes.status, rtfUrl));
+            }
+
+            const readRtf = Effect.tryPromise({
+              try: () => rtfRes.arrayBuffer(),
+              catch: (e) => storageError(toErrorMessage(e)),
+            });
+
+            return Effect.flatMap(readRtf, (data) =>
+              Effect.flatMap(
+                Effect.tryPromise({
+                  try: () => putBinary(env.R2, rtfKey, data, "application/rtf"),
+                  catch: (e) => storageError(toErrorMessage(e)),
+                }),
+                () =>
+                  Effect.map(markDone(env.DB, court, year, num, rtfKey), () => `DONE ${label}.rtf`),
               ),
             );
           });
@@ -267,7 +306,9 @@ const handleFetch = async (
     }
     const contentType = row.r2_key.endsWith(".pdf")
       ? "application/pdf"
-      : "text/plain; charset=utf-8";
+      : row.r2_key.endsWith(".rtf")
+        ? "application/rtf"
+        : "text/plain; charset=utf-8";
     return new Response(obj.body as ReadableStream, {
       headers: { "Content-Type": contentType },
     });
