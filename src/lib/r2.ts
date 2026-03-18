@@ -11,10 +11,13 @@ export const putText = async (r2: R2Bucket, key: R2Key, text: string): Promise<v
   });
 };
 
-export const putBinary = async (r2: R2Bucket, key: R2Key, data: ArrayBuffer): Promise<void> => {
-  await r2.put(key, data, {
-    httpMetadata: { contentType: "application/pdf" },
-  });
+export const putBinary = async (
+  r2: R2Bucket,
+  key: R2Key,
+  data: ArrayBuffer,
+  contentType: string = "application/pdf",
+): Promise<void> => {
+  await r2.put(key, data, { httpMetadata: { contentType } });
 };
 
 // `as R2Key` is the branded-type constructor: R2Key is `string & Brand<"R2Key">`,
@@ -25,5 +28,5 @@ export const makeR2Key = (
   year: number,
   num: string,
   title: string,
-  ext: "txt" | "pdf",
+  ext: "txt" | "pdf" | "rtf",
 ): R2Key => R2KeySchema.make(`${court}/${year}/${num} - ${title}.${ext}`);
