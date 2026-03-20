@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "effect": "^3.19.19"
+    "effect": "^3.20.0"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.13.0",
