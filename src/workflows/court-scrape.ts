@@ -36,17 +36,20 @@ export class CourtScrapeWorkflow extends WorkflowEntrypoint<Env, CourtScrapePara
       Effect.runPromise(upsertCaseBatch(this.env.DB, court, year, cases)),
     );
 
-    await step.do("enqueue", async () => {
-      const messages = cases.map(
-        (c): MessageSendRequest<QueueMessage> => ({
-          body: { court, year, num: c.num, title: c.title, url: c.url },
-        }),
-      );
-      // Queue.sendBatch accepts up to 100 messages; chunk for large courts
-      for (let i = 0; i < messages.length; i += 100) {
-        await this.env.SCRAPE_QUEUE.sendBatch(messages.slice(i, i + 100));
-      }
-    });
+    // One step per 100-message chunk so Cloudflare retries each batch independently
+    // if the Queue API rate-limits a specific sendBatch call.
+    for (let i = 0; i < cases.length; i += 100) {
+      const chunk = cases.slice(i, i + 100);
+      await step.do(`enqueue-${Math.floor(i / 100)}`, async () => {
+        await this.env.SCRAPE_QUEUE.sendBatch(
+          chunk.map(
+            (c): MessageSendRequest<QueueMessage> => ({
+              body: { court, year, num: c.num, title: c.title, url: c.url },
+            }),
+          ),
+        );
+      });
+    }
 
     await step.do("mark-done", async () => {
       const currentYear = new Date().getFullYear();
