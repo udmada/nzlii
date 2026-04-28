@@ -1,16 +1,16 @@
 # Generated from Workflow.pkl. DO NOT EDIT.
 name: Deploy to Cloudflare
-"on":
+'on':
   push:
     branches:
-      - master
+    - master
     paths:
-      - src/**
-      - wrangler.toml
-      - schema.sql
-      - package.json
-      - pnpm-lock.yaml
-      - mise.toml
+    - src/**
+    - wrangler.toml
+    - schema.sql
+    - package.json
+    - pnpm-lock.yaml
+    - mise.toml
 env:
   CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
   CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -20,19 +20,19 @@ jobs:
     environment:
       name: production
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          fetch-depth: 1
-      - uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db # v3
-        with:
-          experimental: true
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Type check
-        run: mise run typecheck
-      - name: Test
-        run: mise run test
-      - name: Apply D1 schema
-        run: mise run db:migrate
-      - name: Deploy to Cloudflare
-        run: mise run deploy
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      with:
+        fetch-depth: 1
+    - uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db # v3
+      with:
+        experimental: true
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
+    - name: Type check
+      run: mise run typecheck
+    - name: Test
+      run: mise run test
+    - name: Apply D1 schema
+      run: mise run db:migrate
+    - name: Deploy to Cloudflare
+      run: mise run deploy
