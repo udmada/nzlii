@@ -7,7 +7,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const DATABASES_URL = "http://www.nzlii.org/databases.html";
+const DATABASES_URL = "https://beta.nzlii.org/databases.html";
 const COURTS_CACHE_PATH = ".cache/courts.json";
 const COURTS_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -93,8 +93,10 @@ const waitForSlot = async (): Promise<void> => {
 
 /** Extract NZ court codes and names from the databases page HTML. */
 export const parseCourts = (html: string): Court[] =>
-  [...html.matchAll(/href="\/nz\/cases\/([^/]+)\/"[^>]*>([^<]+)<\/a>/gi)].flatMap(
-    ([, code, name]) => (code != null && name != null ? [{ code, name: name.trim() }] : []),
+  [
+    ...html.matchAll(/href="(?:https?:\/\/[^/]+)?\/nz\/cases\/([^/]+)\/"[^>]*>([^<]+)<\/a>/gi),
+  ].flatMap(([, code, name]) =>
+    code != null && name != null ? [{ code, name: name.trim() }] : [],
   );
 
 /** Extract (caseNum, title, url) tuples from the index page HTML. */
@@ -135,7 +137,7 @@ export const resolveUrl = (href: string, base: string): string =>
   href.startsWith("http")
     ? href
     : href.startsWith("/")
-      ? `http://www.nzlii.org${href}`
+      ? `https://beta.nzlii.org${href}`
       : `${base}/${href}`;
 
 /**
@@ -252,18 +254,21 @@ const listCourts = async (): Promise<void> => {
 };
 
 const scrape = async (court: string, year: string): Promise<void> => {
-  const base = `http://www.nzlii.org/nz/cases/${court}/${year}`;
+  // Direct path used for PDF/RTF resolution; CGI routes for HTML pages
+  const directBase = `https://beta.nzlii.org/nz/cases/${court}/${year}`;
+  const indexUrl = `${directBase}/`.replace("/nz/cases/", "/cgi-bin/viewtoc/nz/cases/");
+  const viewdocBase = directBase.replace("/nz/cases/", "/cgi-bin/viewdoc/nz/cases/");
   const outputDir = path.join("output", court, year);
   await fs.mkdir(outputDir, { recursive: true });
-  console.log(`Fetching index: ${base}/`);
-  const cases = parseCaseLinks(await fetchText(`${base}/`), base);
+  console.log(`Fetching index: ${indexUrl}`);
+  const cases = parseCaseLinks(await fetchText(indexUrl), viewdocBase);
   console.log(
     `Found ${cases.length} case(s). Workers: ${CONCURRENCY}, gap: ${MIN_FETCH_GAP_MS}–${MIN_FETCH_GAP_MS + FETCH_JITTER_MS}ms`,
   );
   await runConcurrent(cases, CONCURRENCY, async (c) => {
     console.log(`\n[${c.num}] ${c.title}`);
     matchResult(
-      await processCase(base, outputDir, c),
+      await processCase(directBase, outputDir, c),
       (msg) => {
         console.log(`  -> ${msg}`);
       },

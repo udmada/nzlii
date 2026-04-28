@@ -28,7 +28,7 @@ void describe("parseCourts", () => {
 void describe("parseCaseLinks", () => {
   void it("extracts case num, title, and full url", () => {
     const html = `<a href="/nz/cases/NZSC/2026/1.html">Smith v Jones [2026] NZSC 1</a>`;
-    const base = "http://www.nzlii.org/nz/cases/NZSC/2026";
+    const base = "https://beta.nzlii.org/nz/cases/NZSC/2026";
     const links = parseCaseLinks(html, base);
     assert.equal(links.length, 1);
     assert.equal(links[0]?.num, "1");
@@ -77,7 +77,10 @@ void describe("resolveUrl", () => {
   });
 
   void it("prepends origin for root-relative paths", () => {
-    assert.equal(resolveUrl("/nz/file.pdf", "http://base.com"), "http://www.nzlii.org/nz/file.pdf");
+    assert.equal(
+      resolveUrl("/nz/file.pdf", "http://base.com"),
+      "https://beta.nzlii.org/nz/file.pdf",
+    );
   });
 
   void it("appends relative paths to base", () => {

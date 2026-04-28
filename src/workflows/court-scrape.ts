@@ -20,14 +20,16 @@ type CourtScrapeParams = { readonly court: string; readonly year: number };
 export class CourtScrapeWorkflow extends WorkflowEntrypoint<Env, CourtScrapeParams> {
   async run(event: WorkflowEvent<CourtScrapeParams>, step: WorkflowStep): Promise<void> {
     const { court, year } = event.payload;
-    const base = `http://www.nzlii.org/nz/cases/${court}/${year}`;
+    const base = `https://beta.nzlii.org/nz/cases/${court}/${year}`;
+    const indexUrl = `${base}/`.replace("/nz/cases/", "/cgi-bin/viewtoc/nz/cases/");
+    const viewdocBase = base.replace("/nz/cases/", "/cgi-bin/viewdoc/nz/cases/");
 
     const cases = await step.do("fetch-index", async () => {
       const signal = AbortSignal.timeout(FETCH_TIMEOUT_MS);
-      const res = await fetch(`${base}/`, { headers: HEADERS, signal });
+      const res = await fetch(indexUrl, { headers: HEADERS, signal });
       if (res.status === 404) return [];
       if (!res.ok) throw new Error(`HTTP ${res.status} fetching index for ${court}/${year}`);
-      return parseCaseLinks(await res.text(), base);
+      return parseCaseLinks(await res.text(), viewdocBase);
     });
 
     if (cases.length === 0) return;

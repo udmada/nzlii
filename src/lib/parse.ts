@@ -2,8 +2,10 @@ import type { Court, CaseLink } from "../types.ts";
 
 /** Extract NZ court codes and names from the databases page HTML. */
 export const parseCourts = (html: string): readonly Court[] =>
-  [...html.matchAll(/href="\/nz\/cases\/([^/]+)\/"[^>]*>([^<]+)<\/a>/gi)].flatMap(
-    ([, code, name]) => (code != null && name != null ? [{ code, name: name.trim() }] : []),
+  [
+    ...html.matchAll(/href="(?:https?:\/\/[^/]+)?\/nz\/cases\/([^/]+)\/"[^>]*>([^<]+)<\/a>/gi),
+  ].flatMap(([, code, name]) =>
+    code != null && name != null ? [{ code, name: name.trim() }] : [],
   );
 
 /** Extract (caseNum, title, url) tuples from the index page HTML. */
@@ -44,7 +46,7 @@ export const resolveUrl = (href: string, base: string): string =>
   href.startsWith("http")
     ? href
     : href.startsWith("/")
-      ? `http://www.nzlii.org${href}`
+      ? `https://beta.nzlii.org${href}`
       : `${base}/${href}`;
 
 /**

@@ -36,7 +36,7 @@ const HEADERS = {
   "Accept-Language": "en-NZ,en;q=0.9",
 } as const;
 
-const DATABASES_URL = "http://www.nzlii.org/databases.html";
+const DATABASES_URL = "https://beta.nzlii.org/databases.html";
 const FETCH_TIMEOUT_MS = 20_000;
 
 const isQueueMessage = Schema.is(QueueMessageSchema);
